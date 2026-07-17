@@ -1,0 +1,51 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ladestationen Schweiz (ich-tanke-strom.ch)",
+        "description": "Wähle, was eingerichtet werden soll: eine live-filterbare Übersicht aller Stationen in einem Umkreis, oder eine einzelne Favoriten-Station, unabhängig von einem Standort verfolgt.",
+        "data": {
+          "mode": "Modus"
+        }
+      },
+      "radius": {
+        "title": "Umkreis-Übersicht",
+        "description": "Richtet die Ladestations-Verfolgung rund um einen Standort ein, basierend auf der offiziellen Schweizer Plattform ich-tanke-strom.ch (BFE / EnergieSchweiz / swisstopo). Breiten-/Längengrad sind standardmässig der Home-Assistant-Heimatstandort. Integration erneut hinzufügen für einen anderen Radius oder Standort. Filter (Mindestleistung, Steckertyp, Status, Betreiber) werden danach live über number-/select-Entitäten eingestellt.",
+        "data": {
+          "latitude": "Breitengrad",
+          "longitude": "Längengrad",
+          "radius_km": "Umkreis (km)"
+        }
+      },
+      "favorite": {
+        "title": "Favoriten-Station",
+        "description": "Gib die EvseID der Station direkt ein (z.B. per QR-Code am Lader, oder nachgeschlagen auf ich-tanke-strom.ch), oder lass das Feld leer und suche stattdessen in der Nähe eines Standorts — du bekommst dann auf dem nächsten Bildschirm eine Auswahlliste. Integration erneut hinzufügen für einen weiteren Favoriten.",
+        "data": {
+          "station_id": "Stations-EvseID (optional — leer lassen um stattdessen zu suchen)",
+          "latitude": "Breitengrad (nur verwendet falls EvseID leer)",
+          "longitude": "Längengrad (nur verwendet falls EvseID leer)",
+          "radius_km": "Suchradius (km, nur verwendet falls EvseID leer)",
+          "min_power_kw": "Mindestleistung (kW, nur verwendet falls EvseID leer)",
+          "plug_type": "Steckertyp (nur verwendet falls EvseID leer)"
+        }
+      },
+      "favorite_pick": {
+        "title": "Favoriten-Station auswählen",
+        "description": "{count} Stationen in der Nähe gefunden, nächstgelegene zuerst. Einträge mit 📍 sind ganze Standorte (alle dortigen Ladepunkte zu einem Favoriten zusammengefasst) statt eines einzelnen Anschlusses.",
+        "data": {
+          "station_id": "Station",
+          "favorite_name": "Eigener Name (optional)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Diese Standort-/Umkreis-Kombination oder Station ist bereits konfiguriert."
+    },
+    "error": {
+      "cannot_connect": "ich-tanke-strom.ch konnte nicht erreicht werden.",
+      "station_not_found": "Keine Station mit dieser EvseID gefunden.",
+      "no_stations_found": "Keine Stationen in diesem Umkreis gefunden.",
+      "no_evse_id": "Diese Station hat keine EvseID und kann nicht als Favorit verfolgt werden."
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Charging Stations Switzerland (ich-tanke-strom.ch)",
+        "description": "Choose what to set up: a live-filterable overview of all stations within a radius, or a single favorite station tracked independently of any location.",
+        "data": {
+          "mode": "Mode"
+        }
+      },
+      "radius": {
+        "title": "Radius overview",
+        "description": "Sets up charging station tracking around a location, sourced from the official Swiss ich-tanke-strom.ch platform (BFE / EnergieSchweiz / swisstopo). Latitude/longitude default to your Home Assistant home location. Add the integration again for a different radius or location. Filters (minimum power, plug type, status, operator) are adjusted afterwards live via number/select entities.",
+        "data": {
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "radius_km": "Radius (km)"
+        }
+      },
+      "favorite": {
+        "title": "Favorite station",
+        "description": "Enter the station's EvseID directly (e.g. from a QR code on the charger, or looked up on ich-tanke-strom.ch), or leave it empty and search near a location instead — you'll get a list to pick from on the next screen. Add the integration again for another favorite.",
+        "data": {
+          "station_id": "Station EvseID (optional — leave empty to search instead)",
+          "latitude": "Latitude (used only if EvseID is empty)",
+          "longitude": "Longitude (used only if EvseID is empty)",
+          "radius_km": "Search radius (km, used only if EvseID is empty)",
+          "min_power_kw": "Minimum power (kW, used only if EvseID is empty)",
+          "plug_type": "Plug type (used only if EvseID is empty)"
+        }
+      },
+      "favorite_pick": {
+        "title": "Pick your favorite station",
+        "description": "{count} stations found nearby, closest first. Entries marked with 📍 are whole sites (all charge points there combined into one favorite) instead of a single connector.",
+        "data": {
+          "station_id": "Station",
+          "favorite_name": "Custom name (optional)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This location/radius or station is already configured."
+    },
+    "error": {
+      "cannot_connect": "ich-tanke-strom.ch could not be reached.",
+      "station_not_found": "No station with this EvseID was found.",
+      "no_stations_found": "No stations found within this radius.",
+      "no_evse_id": "This station has no EvseID and can't be tracked as a favorite."
+    }
+  }
+}
