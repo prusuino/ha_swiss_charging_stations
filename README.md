@@ -59,7 +59,7 @@ All favorite entities refresh live (every 5 minutes), independent of any radius 
 
 ## Bundled Lovelace card
 
-The integration ships its own Lovelace card, `ich-tanke-strom-card`, showing colored per-connector status boxes in the visual style of ich-tanke-strom.ch — green for available, red for occupied, gray for out of service — each box with the connector's plug type (abbreviated, e.g. "CCS" for CCS Combo 2), charging power, and status. It works for both favorite kinds: a whole site shows one box per connector plus an available/total badge; a single favorite station shows one box.
+The integration ships its own Lovelace card, `ich-tanke-strom-card`, showing colored per-connector status boxes — green for available, red for occupied, gray for out of service — each box with the connector's plug type (abbreviated, e.g. "CCS" for CCS Combo 2), charging power, and status. It works for both favorite kinds: a whole site shows one box per connector plus an available/total badge; a single favorite station shows one box.
 
 The card registers itself automatically (no manual resource setup) and is used on the auto-generated "Favorites" dashboard view. It is also available in the card picker as **Swiss Charging Stations Card** for use anywhere else:
 

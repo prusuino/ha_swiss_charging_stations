@@ -1,8 +1,7 @@
 /* Swiss Charging Stations card — colored per-connector status boxes for a
- * favorite charging station or a whole favorite site, in the visual style of
- * ich-tanke-strom.ch (green = available, red = occupied, gray = out of
- * service). Ships with the integration; registered as a Lovelace resource
- * automatically, no manual setup required.
+ * favorite charging station or a whole favorite site (green = available,
+ * red = occupied, gray = out of service). Ships with the integration;
+ * registered as a Lovelace resource automatically, no manual setup required.
  *
  * Config:
  *   type: custom:ich-tanke-strom-card
