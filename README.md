@@ -81,7 +81,7 @@ Entity names, the device name, and the dropdown filter values adapt automaticall
 
 On first setup, the integration automatically creates a **"Charging Stations"** dashboard (title localized to your HA language) with a full-screen native Home Assistant Map card, already configured to display each station's status directly on its marker. This only happens once: if you later customize or delete that dashboard yourself, the integration won't touch it again.
 
-![The auto-generated dashboard map: station markers cluster at lower zoom levels and show the live status label when zoomed in](docs/map-example.png)
+![The auto-generated dashboard map: one marker per charging site, labeled with live availability](docs/map-example.png)
 
 Favoriting a station or a whole site adds a second view, **"Favorites"**, to that same dashboard with a pre-filled Entities card per favorite — feel free to edit or delete it, though it's kept in sync with the favorite's current connectors on every restart.
 
