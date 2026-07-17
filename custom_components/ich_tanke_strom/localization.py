@@ -183,10 +183,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "it": "Sito di ricarica {name}",
     },
     "favorite_location_pick_label": {
-        "de": "📍 {name} ({count} Ladepunkte)",
-        "en": "📍 {name} ({count} charge points)",
-        "fr": "📍 {name} ({count} points de charge)",
-        "it": "📍 {name} ({count} punti di ricarica)",
+        "de": "📍 {name} ({count} Ladepunkte) · {distance}km",
+        "en": "📍 {name} ({count} charge points) · {distance}km",
+        "fr": "📍 {name} ({count} points de charge) · {distance}km",
+        "it": "📍 {name} ({count} punti di ricarica) · {distance}km",
     },
     "favorite_location_available_name": {
         "de": "Freie Ladepunkte",
@@ -255,4 +255,10 @@ def location_display_label(location: dict, hass: HomeAssistant) -> str:
     """One-line label for a whole physical site in the favorite-picker
     dropdown, listed alongside the individual per-connector options."""
     name = location.get("station_name") or location.get("city") or t("station_fallback_name", hass)
-    return t("favorite_location_pick_label", hass, name=name, count=location.get("count_total", 0))
+    return t(
+        "favorite_location_pick_label",
+        hass,
+        name=name,
+        count=location.get("count_total", 0),
+        distance=location.get("distance_km"),
+    )

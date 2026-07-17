@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.2 — 2026-07-17
+
+- Improved: whole-site entries (📍) in the favorite picker now show the distance in km, matching what individual charge points already display.
+
 ## 1.2.1 — 2026-07-17
 
 - Fixed: charging sites that the data source reports as several separate stations are now merged into one location when they share the same operator and address. This affects two real-world data patterns: operators that report no shared site ID at all (each connector listed as its own station — e.g. Tesla Superchargers, various e-mobility aggregator stations, MOVE), and operators that assign each charging pole at one site its own ID (e.g. a Migros site listed as "Migros | Möhlin 1" and "Migros | Möhlin 2"). A Tesla site with 10 charge points now appears as one location with 10 charge points instead of 10 single-connector entries, and the Migros example becomes one location with 4 charge points instead of two with 2. Correctly grouped sites are unaffected.
