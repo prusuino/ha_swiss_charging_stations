@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.2 — 2026-07-17
+
+- Fixed: declare the `http` component as a manifest dependency (used since v1.3.0 to serve the bundled card) — resolves the hassfest validation error. No functional change.
+
 ## 1.3.1 — 2026-07-17
 
 - New: the bundled card now has a visual config editor — when adding it from the card picker or editing an existing one, a form with an entity dropdown (filtered to this integration's sensors) and an optional title field appears instead of the YAML editor. Editor labels are localized in all four languages.
