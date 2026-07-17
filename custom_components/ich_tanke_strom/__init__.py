@@ -5,10 +5,12 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.loader import async_get_integration
 
 from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_FAVORITE, ENTRY_TYPE_FAVORITE_LOCATION
 from .coordinator import FavoriteLocationCoordinator, FavoriteStationCoordinator, IchTankeStromCoordinator
 from .dashboard import async_ensure_dashboard, async_remove_location_card
+from .frontend import async_register_card
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,6 +23,12 @@ def _is_radius(entry: ConfigEntry) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    try:
+        integration = await async_get_integration(hass, DOMAIN)
+        await async_register_card(hass, str(integration.version))
+    except Exception:  # noqa: BLE001 - card registration must never block integration setup
+        _LOGGER.exception("Automatic registration of the bundled Lovelace card failed")
+
     entry_type = entry.data.get(CONF_ENTRY_TYPE)
     if entry_type == ENTRY_TYPE_FAVORITE:
         coordinator = FavoriteStationCoordinator(hass, entry)

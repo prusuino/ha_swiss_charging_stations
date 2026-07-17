@@ -57,6 +57,18 @@ Favorites (station or site) intentionally have no `geo_location` map marker — 
 
 All favorite entities refresh live (every 5 minutes), independent of any radius overview you may also have configured.
 
+## Bundled Lovelace card
+
+The integration ships its own Lovelace card, `ich-tanke-strom-card`, showing colored per-connector status boxes in the visual style of ich-tanke-strom.ch — green for available, red for occupied, gray for out of service — each box with the connector's plug type (abbreviated, e.g. "CCS" for CCS Combo 2), charging power, and status. It works for both favorite kinds: a whole site shows one box per connector plus an available/total badge; a single favorite station shows one box.
+
+The card registers itself automatically (no manual resource setup) and is used on the auto-generated "Favorites" dashboard view. It is also available in the card picker as **Swiss Charging Stations Card** for use anywhere else:
+
+```yaml
+type: custom:ich-tanke-strom-card
+entity: sensor.charging_station_favorite_location_<name>  # or a single favorite's status sensor
+title: My charging site  # optional
+```
+
 ## Language
 
 Entity names, the device name, and the dropdown filter values adapt automatically to your Home Assistant language setting — German, English, French, and Italian are supported, with English as the fallback for any other language. Raw plug type / operator names from the source data are shown as-is (they are not translatable identifiers).

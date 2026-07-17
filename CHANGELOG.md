@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0 — 2026-07-17
+
+- New: bundled Lovelace card `ich-tanke-strom-card` — colored per-connector status boxes in the visual style of ich-tanke-strom.ch (green = available, red = occupied, gray = out of service), each showing plug type, charging power, and status, plus site name, address, and an available/total badge. Works for whole-site favorites (one box per connector) and single favorite stations. Registers itself as a Lovelace resource automatically — no manual setup — and appears in the card picker as "Swiss Charging Stations Card". Clicking the card opens the entity's more-info dialog.
+- New: the auto-generated "Favorites" dashboard cards now show the graphical card on top of the existing per-connector entities list.
+- New: favorite sensors expose the raw API status (`status_raw`) as an attribute alongside the localized display text, so the card's colors work independently of the active language.
+- Plug-type abbreviations on the card stay short where unambiguous (CCS, CCS 1, CHAdeMO, Tesla, T13); the two Type 2 variants are distinguished as "Type 2" (outlet — bring your own cable) and "Type 2 cable" (attached cable), localized in all four languages.
+
 ## 1.2.2 — 2026-07-17
 
 - Improved: whole-site entries (📍) in the favorite picker now show the distance in km, matching what individual charge points already display.

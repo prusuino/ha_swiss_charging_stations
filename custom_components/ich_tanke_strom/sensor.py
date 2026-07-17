@@ -57,18 +57,23 @@ async def async_setup_entry(
         async_add_entities([status_sensor, power_sensor, plug_sensor, operator_sensor, id_sensor])
 
         site_name = _favorite_name(entry, coordinator.data or {})
-        entities_card = {
-            "type": "entities",
-            "title": site_name,
-            "entities": [
-                {"entity": status_sensor.entity_id, "name": t("favorite_status_name", hass)},
-                {"entity": power_sensor.entity_id, "name": t("favorite_power_name", hass)},
-                {"entity": plug_sensor.entity_id, "name": t("favorite_plug_type_name", hass)},
-                {"entity": operator_sensor.entity_id, "name": t("favorite_operator_name", hass)},
-                {"entity": id_sensor.entity_id, "name": t("favorite_station_id_name", hass)},
+        card = {
+            "type": "vertical-stack",
+            "cards": [
+                {"type": "custom:ich-tanke-strom-card", "entity": status_sensor.entity_id, "title": site_name},
+                {
+                    "type": "entities",
+                    "entities": [
+                        {"entity": status_sensor.entity_id, "name": t("favorite_status_name", hass)},
+                        {"entity": power_sensor.entity_id, "name": t("favorite_power_name", hass)},
+                        {"entity": plug_sensor.entity_id, "name": t("favorite_plug_type_name", hass)},
+                        {"entity": operator_sensor.entity_id, "name": t("favorite_operator_name", hass)},
+                        {"entity": id_sensor.entity_id, "name": t("favorite_station_id_name", hass)},
+                    ],
+                },
             ],
         }
-        hass.async_create_task(_async_add_dashboard_card(hass, entry, site_name, entities_card))
+        hass.async_create_task(_async_add_dashboard_card(hass, entry, site_name, card))
         return
 
     if entry_type == ENTRY_TYPE_FAVORITE_LOCATION:
@@ -121,12 +126,21 @@ async def async_setup_entry(
 
             if not dashboard_card_added and known_connectors:
                 dashboard_card_added = True
-                entities_card = {
-                    "type": "entities",
-                    "title": site_name,
-                    "entities": _build_location_card_entities(hass, known_connectors, summary_sensor),
+                card = {
+                    "type": "vertical-stack",
+                    "cards": [
+                        {
+                            "type": "custom:ich-tanke-strom-card",
+                            "entity": summary_sensor.entity_id,
+                            "title": site_name,
+                        },
+                        {
+                            "type": "entities",
+                            "entities": _build_location_card_entities(hass, known_connectors, summary_sensor),
+                        },
+                    ],
                 }
-                hass.async_create_task(_async_add_dashboard_card(hass, entry, site_name, entities_card))
+                hass.async_create_task(_async_add_dashboard_card(hass, entry, site_name, card))
 
         entry.async_on_unload(location_coordinator.async_add_listener(_sync_connector_entities))
         _sync_connector_entities()
@@ -237,6 +251,9 @@ class FavoriteStationSensor(CoordinatorEntity[FavoriteStationCoordinator], Senso
         station = self.coordinator.data or {}
         return {
             "station_id": self._entry.data[CONF_STATION_ID],
+            # Raw API status alongside the localized state — the bundled
+            # Lovelace card keys its colors off this, independent of language.
+            "status_raw": station.get("status"),
             "power_kw": station.get("power_kw"),
             "plug_types": station.get("plugs"),
             "operator": station.get("operator"),
@@ -385,6 +402,10 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
             {
                 "evse_id": evse_id,
                 "status": localized_status(c.get("status"), self._hass_ref),
+                # Raw API value alongside the localized display text — the
+                # bundled Lovelace card keys its colors off this, independent
+                # of the active language.
+                "status_raw": c.get("status"),
                 "plug_types": c.get("plugs"),
                 "power_kw": c.get("power_kw"),
             }
