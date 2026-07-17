@@ -29,6 +29,7 @@ from .const import (
     CONF_PLUG_TYPE,
     CONF_RADIUS_KM,
     CONF_STATION_ID,
+    CONF_STATION_LOCATION_EVSE_IDS,
     CONF_STATION_LOCATION_ID,
     DEFAULT_MIN_POWER_KW,
     DEFAULT_RADIUS_KM,
@@ -251,11 +252,16 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
         custom_name = (custom_name or "").strip()
         fallback = (location.get("station_name") or location.get("city") or location_id) if location else location_id
         name = custom_name or fallback
+        data = {
+            CONF_ENTRY_TYPE: ENTRY_TYPE_FAVORITE_LOCATION,
+            CONF_STATION_LOCATION_ID: location_id,
+            CONF_FAVORITE_NAME: custom_name or None,
+        }
+        if location and location.get("is_synthetic"):
+            # No real ChargingStationId covers this site (see group_by_location) —
+            # pin the member EvseIDs so the coordinator can re-fetch it later.
+            data[CONF_STATION_LOCATION_EVSE_IDS] = sorted(location["connectors"])
         return self.async_create_entry(
             title=t("favorite_location_device_name", self.hass, name=name),
-            data={
-                CONF_ENTRY_TYPE: ENTRY_TYPE_FAVORITE_LOCATION,
-                CONF_STATION_LOCATION_ID: location_id,
-                CONF_FAVORITE_NAME: custom_name or None,
-            },
+            data=data,
         )

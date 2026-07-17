@@ -35,6 +35,12 @@ CONF_FAVORITE_NAME = "favorite_name"
 # map marker for the whole site instead.
 CONF_STATION_LOCATION_ID = "station_location_id"
 
+# Set only for a location favorite whose group was formed by the address
+# fallback (see group_by_location) instead of a real shared ChargingStationId
+# — there is no single ID the API understands to re-fetch the site, so the
+# member EvseIDs are pinned explicitly and refreshed by EvseID instead.
+CONF_STATION_LOCATION_EVSE_IDS = "station_location_evse_ids"
+
 # Options (live-adjustable filters, stored in entry.options).
 CONF_MIN_POWER_KW = "min_power_kw"
 CONF_PLUG_TYPE = "plug_type"

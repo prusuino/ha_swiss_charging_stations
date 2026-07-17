@@ -129,10 +129,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "it": "Panoramica per raggio (più stazioni, filtri live)",
     },
     "mode_favorite": {
-        "de": "Einzelne Station favorisieren",
-        "en": "Pin a single favorite station",
-        "fr": "Épingler une seule borne favorite",
-        "it": "Aggiungi una singola stazione preferita",
+        "de": "Einzelne Station oder Standort favorisieren",
+        "en": "Pin a single station or location",
+        "fr": "Épingler une seule borne ou un site favori",
+        "it": "Aggiungi una singola stazione o sede preferita",
     },
     "favorite_device_name": {
         "de": "Ladestation {name}",
