@@ -46,12 +46,89 @@ function shortPlugs(plugs, lang) {
   return shorts.join(" · ");
 }
 
+const EDITOR_LABELS = {
+  entity: {
+    de: "Favorit-Sensor (Standort oder einzelne Station)",
+    en: "Favorite sensor (site or single station)",
+    fr: "Capteur favori (site ou borne individuelle)",
+    it: "Sensore preferito (sede o stazione singola)",
+  },
+  title: {
+    de: "Titel (optional)",
+    en: "Title (optional)",
+    fr: "Titre (optionnel)",
+    it: "Titolo (opzionale)",
+  },
+};
+
+class IchTankeStromCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = config;
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  _render() {
+    if (!this._hass || !this._config) return;
+    if (!this._form) {
+      this._form = document.createElement("ha-form");
+      this._form.addEventListener("value-changed", (ev) => {
+        ev.stopPropagation();
+        const config = { type: "custom:ich-tanke-strom-card", ...ev.detail.value };
+        if (!config.title) delete config.title;
+        this.dispatchEvent(
+          new CustomEvent("config-changed", {
+            detail: { config },
+            bubbles: true,
+            composed: true,
+          })
+        );
+      });
+      this.appendChild(this._form);
+    }
+    const lang = ((this._hass.language || "en").split("-")[0]);
+    this._form.hass = this._hass;
+    this._form.data = { entity: this._config.entity || "", title: this._config.title || "" };
+    this._form.schema = [
+      {
+        name: "entity",
+        required: true,
+        selector: { entity: { domain: "sensor", integration: "ich_tanke_strom" } },
+      },
+      { name: "title", selector: { text: {} } },
+    ];
+    this._form.computeLabel = (schema) =>
+      (EDITOR_LABELS[schema.name] &&
+        (EDITOR_LABELS[schema.name][lang] || EDITOR_LABELS[schema.name].en)) ||
+      schema.name;
+  }
+}
+
+customElements.define("ich-tanke-strom-card-editor", IchTankeStromCardEditor);
+
 class IchTankeStromCard extends HTMLElement {
   setConfig(config) {
     if (!config.entity) {
       throw new Error("ich-tanke-strom-card: 'entity' is required");
     }
     this._config = config;
+  }
+
+  static async getConfigElement() {
+    // ha-form and the selector components are lazy-loaded by the frontend;
+    // loading a core card editor first guarantees they are registered.
+    if (window.loadCardHelpers) {
+      const helpers = await window.loadCardHelpers();
+      const entitiesCard = await helpers.createCardElement({ type: "entities", entities: [] });
+      if (entitiesCard && entitiesCard.constructor.getConfigElement) {
+        await entitiesCard.constructor.getConfigElement();
+      }
+    }
+    return document.createElement("ich-tanke-strom-card-editor");
   }
 
   set hass(hass) {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1 — 2026-07-17
+
+- New: the bundled card now has a visual config editor — when adding it from the card picker or editing an existing one, a form with an entity dropdown (filtered to this integration's sensors) and an optional title field appears instead of the YAML editor. Editor labels are localized in all four languages.
+
 ## 1.3.0 — 2026-07-17
 
 - New: bundled Lovelace card `ich-tanke-strom-card` — colored per-connector status boxes (green = available, red = occupied, gray = out of service), each showing plug type, charging power, and status, plus site name, address, and an available/total badge. Works for whole-site favorites (one box per connector) and single favorite stations. Registers itself as a Lovelace resource automatically — no manual setup — and appears in the card picker as "Swiss Charging Stations Card". Clicking the card opens the entity's more-info dialog.
