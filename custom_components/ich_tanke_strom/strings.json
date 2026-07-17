@@ -10,11 +10,11 @@
       },
       "radius": {
         "title": "Radius overview",
-        "description": "Sets up charging station tracking around a location, sourced from the official Swiss ich-tanke-strom.ch platform (BFE / EnergieSchweiz / swisstopo). Latitude/longitude default to your Home Assistant home location. Add the integration again for a different radius or location. Filters (minimum power, plug type, status, operator) are adjusted afterwards live via number/select entities.",
+        "description": "Sets up charging station tracking around a location, sourced from the official Swiss ich-tanke-strom.ch platform (BFE / EnergieSchweiz / swisstopo). Latitude/longitude default to your Home Assistant home location. Add the integration again for a different radius or location. Filters (minimum power, plug type, status, operator) are adjusted afterwards live via number/select entities. The radius is capped at 30 km — larger areas make the source server slow (20-40+ s per fetch) and would flood Home Assistant with thousands of entities.",
         "data": {
           "latitude": "Latitude",
           "longitude": "Longitude",
-          "radius_km": "Radius (km)"
+          "radius_km": "Radius (km, max. 30)"
         }
       },
       "favorite": {
@@ -24,7 +24,7 @@
           "station_id": "Station EvseID (optional — leave empty to search instead)",
           "latitude": "Latitude (used only if EvseID is empty)",
           "longitude": "Longitude (used only if EvseID is empty)",
-          "radius_km": "Search radius (km, used only if EvseID is empty)",
+          "radius_km": "Search radius (km, max. 30 — used only if EvseID is empty)",
           "min_power_kw": "Minimum power (kW, used only if EvseID is empty)",
           "plug_type": "Plug type (used only if EvseID is empty)"
         }

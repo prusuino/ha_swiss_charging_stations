@@ -86,6 +86,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Borne de recharge",
         "it": "Stazione di ricarica",
     },
+    "map_label_free": {
+        "de": "{free}/{total} frei",
+        "en": "{free}/{total} available",
+        "fr": "{free}/{total} libres",
+        "it": "{free}/{total} liberi",
+    },
     "station_fallback_name": {
         "de": "Ladestation",
         "en": "Charging station",

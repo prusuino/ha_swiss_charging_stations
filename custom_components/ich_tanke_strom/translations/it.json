@@ -10,11 +10,11 @@
       },
       "radius": {
         "title": "Panoramica per raggio",
-        "description": "Configura il monitoraggio delle stazioni di ricarica attorno a una posizione, basato sulla piattaforma svizzera ufficiale ich-tanke-strom.ch (UFE / SvizzeraEnergia / swisstopo). Latitudine/longitudine corrispondono per default alla posizione di casa di Home Assistant. Aggiungi di nuovo l'integrazione per un altro raggio o posizione. I filtri (potenza minima, tipo di connettore, stato, gestore) si regolano poi in tempo reale tramite entità number/select.",
+        "description": "Configura il monitoraggio delle stazioni di ricarica attorno a una posizione, basato sulla piattaforma svizzera ufficiale ich-tanke-strom.ch (UFE / SvizzeraEnergia / swisstopo). Latitudine/longitudine corrispondono per default alla posizione di casa di Home Assistant. Aggiungi di nuovo l'integrazione per un altro raggio o posizione. I filtri (potenza minima, tipo di connettore, stato, gestore) si regolano poi in tempo reale tramite entità number/select. Il raggio è limitato a 30 km — aree più grandi rallentano il server sorgente (20–40+ s per richiesta) e inonderebbero Home Assistant con migliaia di entità.",
         "data": {
           "latitude": "Latitudine",
           "longitude": "Longitudine",
-          "radius_km": "Raggio (km)"
+          "radius_km": "Raggio (km, max. 30)"
         }
       },
       "favorite": {
@@ -24,7 +24,7 @@
           "station_id": "EvseID della stazione (opzionale — lascia vuoto per cercare invece)",
           "latitude": "Latitudine (usata solo se EvseID è vuoto)",
           "longitude": "Longitudine (usata solo se EvseID è vuoto)",
-          "radius_km": "Raggio di ricerca (km, usato solo se EvseID è vuoto)",
+          "radius_km": "Raggio di ricerca (km, max. 30 — usato solo se l'EvseID è vuoto)",
           "min_power_kw": "Potenza minima (kW, usata solo se EvseID è vuoto)",
           "plug_type": "Tipo di connettore (usato solo se EvseID è vuoto)"
         }

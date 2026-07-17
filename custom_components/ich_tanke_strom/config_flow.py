@@ -14,6 +14,9 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -34,6 +37,7 @@ from .const import (
     DEFAULT_MIN_POWER_KW,
     DEFAULT_RADIUS_KM,
     DOMAIN,
+    MAX_RADIUS_KM,
     ENTRY_TYPE_FAVORITE,
     ENTRY_TYPE_FAVORITE_LOCATION,
     ENTRY_TYPE_RADIUS,
@@ -48,6 +52,13 @@ MODE_RADIUS = "radius"
 MODE_FAVORITE = "favorite"
 
 _LOCATION_PREFIX = "LOCATION:"  # sentinel prefix for a whole-location pick — never collides with a real EvseID
+
+# Radius input with the upper bound visible/enforced in the UI. Bigger radii
+# strain both the source server (20-40+ s per fetch) and Home Assistant
+# (thousands of stations); see MAX_RADIUS_KM in const.py.
+_RADIUS_SELECTOR = NumberSelector(
+    NumberSelectorConfig(min=1, max=MAX_RADIUS_KM, step=0.5, unit_of_measurement="km", mode=NumberSelectorMode.BOX)
+)
 
 
 class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -103,7 +114,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_LATITUDE, default=self.hass.config.latitude): vol.Coerce(float),
                 vol.Required(CONF_LONGITUDE, default=self.hass.config.longitude): vol.Coerce(float),
-                vol.Required(CONF_RADIUS_KM, default=DEFAULT_RADIUS_KM): vol.Coerce(float),
+                vol.Required(CONF_RADIUS_KM, default=DEFAULT_RADIUS_KM): _RADIUS_SELECTOR,
             }
         )
         return self.async_show_form(step_id="radius", data_schema=schema)
@@ -153,7 +164,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_STATION_ID, default=""): str,
                 vol.Optional(CONF_LATITUDE, default=self.hass.config.latitude): vol.Coerce(float),
                 vol.Optional(CONF_LONGITUDE, default=self.hass.config.longitude): vol.Coerce(float),
-                vol.Optional(CONF_RADIUS_KM, default=DEFAULT_RADIUS_KM): vol.Coerce(float),
+                vol.Optional(CONF_RADIUS_KM, default=DEFAULT_RADIUS_KM): _RADIUS_SELECTOR,
                 vol.Optional(CONF_MIN_POWER_KW, default=DEFAULT_MIN_POWER_KW): vol.Coerce(float),
                 vol.Optional(CONF_PLUG_TYPE, default=FILTER_ALL): SelectSelector(
                     SelectSelectorConfig(
@@ -223,7 +234,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
                         vol.Optional(CONF_STATION_ID, default=""): str,
                         vol.Optional(CONF_LATITUDE, default=self.hass.config.latitude): vol.Coerce(float),
                         vol.Optional(CONF_LONGITUDE, default=self.hass.config.longitude): vol.Coerce(float),
-                        vol.Optional(CONF_RADIUS_KM, default=DEFAULT_RADIUS_KM): vol.Coerce(float),
+                        vol.Optional(CONF_RADIUS_KM, default=DEFAULT_RADIUS_KM): _RADIUS_SELECTOR,
                     }
                 ),
                 errors={"base": "no_evse_id"},

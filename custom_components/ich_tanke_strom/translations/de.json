@@ -10,11 +10,11 @@
       },
       "radius": {
         "title": "Umkreis-Übersicht",
-        "description": "Richtet die Ladestations-Verfolgung rund um einen Standort ein, basierend auf der offiziellen Schweizer Plattform ich-tanke-strom.ch (BFE / EnergieSchweiz / swisstopo). Breiten-/Längengrad sind standardmässig der Home-Assistant-Heimatstandort. Integration erneut hinzufügen für einen anderen Radius oder Standort. Filter (Mindestleistung, Steckertyp, Status, Betreiber) werden danach live über number-/select-Entitäten eingestellt.",
+        "description": "Richtet die Ladestations-Verfolgung rund um einen Standort ein, basierend auf der offiziellen Schweizer Plattform ich-tanke-strom.ch (BFE / EnergieSchweiz / swisstopo). Breiten-/Längengrad sind standardmässig der Home-Assistant-Heimatstandort. Integration erneut hinzufügen für einen anderen Radius oder Standort. Filter (Mindestleistung, Steckertyp, Status, Betreiber) werden danach live über number-/select-Entitäten eingestellt. Der Radius ist auf 30 km begrenzt — grössere Gebiete machen den Quell-Server langsam (20–40+ s pro Abruf) und würden Home Assistant mit Tausenden Entitäten fluten.",
         "data": {
           "latitude": "Breitengrad",
           "longitude": "Längengrad",
-          "radius_km": "Umkreis (km)"
+          "radius_km": "Radius (km, max. 30)"
         }
       },
       "favorite": {
@@ -24,7 +24,7 @@
           "station_id": "Stations-EvseID (optional — leer lassen um stattdessen zu suchen)",
           "latitude": "Breitengrad (nur verwendet falls EvseID leer)",
           "longitude": "Längengrad (nur verwendet falls EvseID leer)",
-          "radius_km": "Suchradius (km, nur verwendet falls EvseID leer)",
+          "radius_km": "Suchradius (km, max. 30 — nur verwendet wenn EvseID leer ist)",
           "min_power_kw": "Mindestleistung (kW, nur verwendet falls EvseID leer)",
           "plug_type": "Steckertyp (nur verwendet falls EvseID leer)"
         }

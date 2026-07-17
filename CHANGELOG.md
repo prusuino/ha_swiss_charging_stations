@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0 — 2026-07-17
+
+- Changed: the radius map now shows **one marker per charging site** instead of one per charge point — connectors at the same location are grouped (same logic as the favorite picker), so multi-charger sites no longer stack indistinguishable markers on identical coordinates. Multi-connector sites are labeled with their availability ("6/7 available", localized), single chargers keep their plain status label. Markers are now refreshed in place on every update, so the labels stay live. Leftover per-connector marker entities from earlier versions are cleaned up automatically.
+- Changed: the radius is now capped at **30 km** in the setup (radius overview and favorite search) — larger areas make the source server slow (20–40+ seconds per fetch) and would flood Home Assistant with thousands of entities. Existing entries with a larger radius keep working. Independently, at most the 500 nearest sites get a map marker; the availability sensor always counts the full filtered set.
+- Fixed: a radius fetch could fail entirely (integration setup aborting with "unreachable: 0") when the source returned a station with a malformed single-element field — observed live for 2 of ~6,000 stations reporting `ChargingStationNames` as an object instead of a list. Parsing now normalizes these fields, and a malformed station is skipped instead of breaking the whole refresh.
+- Improved: large-radius fetches are much faster and no longer time out — the request now asks only for the needed properties (roughly halves response size and server time) and uses a more generous timeout (90 s instead of 30 s).
+
 ## 1.3.3 — 2026-07-17
 
 - Changed: the bundled card is renamed to `swiss-charging-stations-card` (matching the integration name); use `type: custom:swiss-charging-stations-card` going forward. The former `custom:ich-tanke-strom-card` keeps working as a compatibility alias, auto-generated dashboard cards migrate automatically on restart, and the stale resource entry for the old file name is cleaned up.

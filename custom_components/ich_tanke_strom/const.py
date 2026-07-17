@@ -5,11 +5,30 @@ WFS_URL = "http://ich-tanke-strom.switzerlandnorth.cloudapp.azure.com:8080/geose
 KM_PER_DEGREE = 111.0
 UPDATE_INTERVAL_MINUTES = 5
 
+# Large radii return large result sets: measured 2026-07-17, a 50 km radius
+# yields ~6,000 features and took ~38 s / 6.7 MB unslimmed — well past the old
+# 30 s timeout, which made setup fail entirely. The radius fetch therefore
+# requests only the needed properties (roughly halves size and time) and uses
+# a generous timeout.
+FETCH_TIMEOUT_SECONDS = 90
+
+# Cap on map markers created by one radius entry. Without it, a big radius
+# floods Home Assistant with thousands of geo_location entities (websocket
+# overload, sluggish frontend). The nearest stations win; the count sensor
+# still reflects the full filtered set.
+MAX_MAP_MARKERS = 500
+
 CONF_LATITUDE = "latitude"
 CONF_LONGITUDE = "longitude"
 CONF_RADIUS_KM = "radius_km"
 
 DEFAULT_RADIUS_KM = 15
+
+# Upper bound for the radius, enforced in the config flow and documented in
+# the README. Beyond this the source server needs 20-40+ s per fetch and the
+# result set grows into thousands of stations — measured 2026-07-17: 15 km ≈
+# 600 stations / 3 s, 50 km ≈ 6,000 stations / 38 s.
+MAX_RADIUS_KM = 30
 
 # Which kind of config entry this is. Radius entries (the original/default
 # kind) show every station within a live-filterable area. Favorite entries

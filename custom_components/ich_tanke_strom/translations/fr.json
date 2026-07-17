@@ -10,11 +10,11 @@
       },
       "radius": {
         "title": "Aperçu par rayon",
-        "description": "Configure le suivi des bornes de recharge autour d'un emplacement, à partir de la plateforme suisse officielle ich-tanke-strom.ch (OFEN / SuisseEnergie / swisstopo). La latitude/longitude correspondent par défaut à l'emplacement de votre domicile Home Assistant. Ajoutez à nouveau l'intégration pour un autre rayon ou emplacement. Les filtres (puissance minimale, type de connecteur, statut, exploitant) se règlent ensuite en direct via des entités number/select.",
+        "description": "Configure le suivi des bornes de recharge autour d'un emplacement, à partir de la plateforme suisse officielle ich-tanke-strom.ch (OFEN / SuisseEnergie / swisstopo). La latitude/longitude correspondent par défaut à l'emplacement de votre domicile Home Assistant. Ajoutez à nouveau l'intégration pour un autre rayon ou emplacement. Les filtres (puissance minimale, type de connecteur, statut, exploitant) se règlent ensuite en direct via des entités number/select. Le rayon est limité à 30 km — des zones plus grandes ralentissent le serveur source (20–40+ s par requête) et inonderaient Home Assistant de milliers d'entités.",
         "data": {
           "latitude": "Latitude",
           "longitude": "Longitude",
-          "radius_km": "Rayon (km)"
+          "radius_km": "Rayon (km, max. 30)"
         }
       },
       "favorite": {
@@ -24,7 +24,7 @@
           "station_id": "EvseID de la borne (optionnel — laisser vide pour rechercher à la place)",
           "latitude": "Latitude (utilisée seulement si EvseID est vide)",
           "longitude": "Longitude (utilisée seulement si EvseID est vide)",
-          "radius_km": "Rayon de recherche (km, utilisé seulement si EvseID est vide)",
+          "radius_km": "Rayon de recherche (km, max. 30 — utilisé seulement si l'EvseID est vide)",
           "min_power_kw": "Puissance minimale (kW, utilisée seulement si EvseID est vide)",
           "plug_type": "Type de connecteur (utilisé seulement si EvseID est vide)"
         }

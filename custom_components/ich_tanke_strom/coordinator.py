@@ -30,6 +30,7 @@ from .const import (
     CONF_STATUS,
     DEFAULT_MIN_POWER_KW,
     DOMAIN,
+    FETCH_TIMEOUT_SECONDS,
     FILTER_ALL,
     KM_PER_DEGREE,
     STATUS_AVAILABLE,
@@ -64,10 +65,15 @@ def _parse_station(feature: dict, lat: float | None = None, lon: float | None = 
         return None
     station_lon, station_lat = coords[0], coords[1]
 
-    facilities = props.get("ChargingFacilities") or []
-    power_kw = max((f.get("Power") or 0) for f in facilities) if facilities else 0
+    # The source serializes single-element complex fields inconsistently —
+    # a handful of stations return these as a bare dict instead of a list
+    # (observed live for ChargingStationNames, 2 of ~6,000 stations), which
+    # used to crash the whole radius refresh. Normalize everything.
+    facilities = [f for f in _as_list(props.get("ChargingFacilities")) if isinstance(f, dict)]
+    power_kw = max(((f.get("Power") or 0) for f in facilities), default=0)
 
     plugs = list(_as_list(props.get("Plugs")))
+    names = [n for n in _as_list(props.get("ChargingStationNames")) if isinstance(n, dict)]
 
     address = props.get("Address", {}) or {}
     evse_id = props.get("EvseID")
@@ -87,11 +93,7 @@ def _parse_station(feature: dict, lat: float | None = None, lon: float | None = 
         "power_kw": power_kw,
         "plugs": plugs,
         "operator": props.get("OperatorID"),
-        "station_name": (
-            (props.get("ChargingStationNames") or [{}])[0].get("value")
-            if props.get("ChargingStationNames")
-            else None
-        ),
+        "station_name": names[0].get("value") if names else None,
         "street": address.get("Street"),
         "city": address.get("City"),
         "postal_code": address.get("PostalCode"),
@@ -114,15 +116,28 @@ async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radi
         "request": "GetFeature",
         "typeName": "ich-tanke-strom:evse",
         "outputFormat": "application/json",
+        # Only the properties _parse_station actually reads — roughly halves
+        # response size and server time on large radii. Feature ids (used as
+        # stable entity unique_ids) are unaffected, verified against the
+        # unslimmed response.
+        "propertyName": (
+            "EvseID,ChargingStationId,EvseStatus,ChargingFacilities,Plugs,"
+            "Address,ChargingStationNames,OperatorID,lastUpdate,IsOpen24Hours,"
+            "PaymentOptions,geometry"
+        ),
         "cql_filter": f"bbox(geometry,{bbox})",
     }
-    async with session.get(WFS_URL, params=params, timeout=30) as resp:
+    async with session.get(WFS_URL, params=params, timeout=FETCH_TIMEOUT_SECONDS) as resp:
         resp.raise_for_status()
         data = await resp.json(content_type=None)
 
     stations: dict[str, dict] = {}
     for feature in data.get("features", []):
-        station = _parse_station(feature, lat, lon)
+        try:
+            station = _parse_station(feature, lat, lon)
+        except Exception:  # noqa: BLE001 - one malformed feature must never kill the whole refresh
+            _LOGGER.debug("Skipping malformed station feature %s", feature.get("id"), exc_info=True)
+            continue
         if station is None:
             continue
         if station["distance_km"] > radius_km:
@@ -363,6 +378,9 @@ class IchTankeStromCoordinator(DataUpdateCoordinator[dict]):
         return {
             "all_stations": all_stations,
             "filtered_stations": filtered,
+            # One entry per physical site (connectors that pass the filters,
+            # grouped) — the map shows these instead of per-connector markers.
+            "filtered_locations": group_by_location(filtered),
             "plug_types": plug_types,
             "operators": operators,
             "count_total": len(all_stations),
