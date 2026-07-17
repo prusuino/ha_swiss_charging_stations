@@ -60,7 +60,7 @@ async def async_setup_entry(
         card = {
             "type": "vertical-stack",
             "cards": [
-                {"type": "custom:ich-tanke-strom-card", "entity": status_sensor.entity_id, "title": site_name},
+                {"type": "custom:swiss-charging-stations-card", "entity": status_sensor.entity_id, "title": site_name},
                 {
                     "type": "entities",
                     "entities": [
@@ -130,7 +130,7 @@ async def async_setup_entry(
                     "type": "vertical-stack",
                     "cards": [
                         {
-                            "type": "custom:ich-tanke-strom-card",
+                            "type": "custom:swiss-charging-stations-card",
                             "entity": summary_sensor.entity_id,
                             "title": site_name,
                         },

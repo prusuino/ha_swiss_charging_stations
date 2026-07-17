@@ -19,8 +19,11 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-CARD_FILENAME = "ich-tanke-strom-card.js"
+CARD_FILENAME = "swiss-charging-stations-card.js"
 CARD_URL_BASE = f"/{DOMAIN}_files/{CARD_FILENAME}"
+# Former filename (pre-v1.3.3) — stale resource entries pointing at it are
+# removed on startup so browsers don't try to load a URL that no longer exists.
+_OLD_CARD_FILENAME = "ich-tanke-strom-card.js"
 _REGISTERED_FLAG = f"{DOMAIN}_card_registered"
 
 
@@ -61,13 +64,24 @@ async def async_register_card(hass: HomeAssistant, version: str) -> None:
         await resources.async_load()
         resources.loaded = True
 
+    existing = None
+    stale_ids = []
     for item in resources.async_items():
         item_url = item.get("url", "")
         if CARD_URL_BASE in item_url:
-            if item_url != url:
-                await resources.async_update_item(item["id"], {"url": url})
-                _LOGGER.info("Updated bundled card resource to %s", url)
-            return
+            existing = item
+        elif _OLD_CARD_FILENAME in item_url:
+            stale_ids.append(item["id"])
+
+    for item_id in stale_ids:
+        await resources.async_delete_item(item_id)
+        _LOGGER.info("Removed stale card resource entry %s", item_id)
+
+    if existing is not None:
+        if existing.get("url") != url:
+            await resources.async_update_item(existing["id"], {"url": url})
+            _LOGGER.info("Updated bundled card resource to %s", url)
+        return
 
     await resources.async_create_item({"res_type": "module", "url": url})
     _LOGGER.info("Registered bundled card resource %s", url)

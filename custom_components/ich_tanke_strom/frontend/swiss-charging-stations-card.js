@@ -1,10 +1,10 @@
-/* Swiss Charging Stations card — colored per-connector status boxes for a
+/* swiss-charging-stations-card — colored per-connector status boxes for a
  * favorite charging station or a whole favorite site (green = available,
  * red = occupied, gray = out of service). Ships with the integration;
  * registered as a Lovelace resource automatically, no manual setup required.
  *
  * Config:
- *   type: custom:ich-tanke-strom-card
+ *   type: custom:swiss-charging-stations-card
  *   entity: sensor.charging_station_favorite_location_xxx   (site summary)
  *     — or —
  *   entity: sensor.charging_station_favorite_xxx            (single station)
@@ -61,7 +61,7 @@ const EDITOR_LABELS = {
   },
 };
 
-class IchTankeStromCardEditor extends HTMLElement {
+class SwissChargingStationsCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = config;
     this._render();
@@ -78,7 +78,7 @@ class IchTankeStromCardEditor extends HTMLElement {
       this._form = document.createElement("ha-form");
       this._form.addEventListener("value-changed", (ev) => {
         ev.stopPropagation();
-        const config = { type: "custom:ich-tanke-strom-card", ...ev.detail.value };
+        const config = { type: "custom:swiss-charging-stations-card", ...ev.detail.value };
         if (!config.title) delete config.title;
         this.dispatchEvent(
           new CustomEvent("config-changed", {
@@ -108,12 +108,12 @@ class IchTankeStromCardEditor extends HTMLElement {
   }
 }
 
-customElements.define("ich-tanke-strom-card-editor", IchTankeStromCardEditor);
+customElements.define("swiss-charging-stations-card-editor", SwissChargingStationsCardEditor);
 
-class IchTankeStromCard extends HTMLElement {
+class SwissChargingStationsCard extends HTMLElement {
   setConfig(config) {
     if (!config.entity) {
-      throw new Error("ich-tanke-strom-card: 'entity' is required");
+      throw new Error("swiss-charging-stations-card: 'entity' is required");
     }
     this._config = config;
   }
@@ -128,7 +128,7 @@ class IchTankeStromCard extends HTMLElement {
         await entitiesCard.constructor.getConfigElement();
       }
     }
-    return document.createElement("ich-tanke-strom-card-editor");
+    return document.createElement("swiss-charging-stations-card-editor");
   }
 
   set hass(hass) {
@@ -282,11 +282,13 @@ class IchTankeStromCard extends HTMLElement {
   }
 }
 
-customElements.define("ich-tanke-strom-card", IchTankeStromCard);
+customElements.define("swiss-charging-stations-card", SwissChargingStationsCard);
+// Backward-compatibility alias for cards created under the former element name.
+customElements.define("ich-tanke-strom-card", class extends SwissChargingStationsCard {});
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "ich-tanke-strom-card",
+  type: "swiss-charging-stations-card",
   name: "Swiss Charging Stations Card",
   description:
     "Colored per-connector status boxes for a favorite charging station or site (ich-tanke-strom.ch).",

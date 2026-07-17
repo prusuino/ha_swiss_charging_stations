@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.3 — 2026-07-17
+
+- Changed: the bundled card is renamed to `swiss-charging-stations-card` (matching the integration name); use `type: custom:swiss-charging-stations-card` going forward. The former `custom:ich-tanke-strom-card` keeps working as a compatibility alias, auto-generated dashboard cards migrate automatically on restart, and the stale resource entry for the old file name is cleaned up.
+
 ## 1.3.2 — 2026-07-17
 
 - Fixed: declare the `http` component as a manifest dependency (used since v1.3.0 to serve the bundled card) — resolves the hassfest validation error. No functional change.
