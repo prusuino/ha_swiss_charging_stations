@@ -21,7 +21,7 @@
         "title": "Favoriten-Station",
         "description": "Gib die EvseID der Station direkt ein (z.B. per QR-Code am Lader, oder nachgeschlagen auf ich-tanke-strom.ch), oder lass das Feld leer und suche stattdessen in der Nähe eines Standorts — du bekommst dann auf dem nächsten Bildschirm eine Auswahlliste. Integration erneut hinzufügen für einen weiteren Favoriten.",
         "data": {
-          "station_id": "Stations-EvseID (optional — leer lassen um stattdessen zu suchen)",
+          "station_id": "Stations-EvseID oder Standort-ChargingStationId (optional — leer lassen um stattdessen zu suchen)",
           "latitude": "Breitengrad (nur verwendet falls EvseID leer)",
           "longitude": "Längengrad (nur verwendet falls EvseID leer)",
           "radius_km": "Suchradius (km, max. 30 — nur verwendet wenn EvseID leer ist)",

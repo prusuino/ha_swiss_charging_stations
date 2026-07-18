@@ -33,10 +33,11 @@ from .coordinator import (
     FavoriteStationCoordinator,
     IchTankeStromCoordinator,
     icon_for_status,
+    site_status,
 )
 from .dashboard import async_add_location_card
 from .device import device_info
-from .localization import localized_status, t
+from .localization import localized_site_status, localized_status, t
 
 _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data: ich-tanke-strom.ch (BFE / EnergieSchweiz / swisstopo)"
@@ -81,7 +82,8 @@ async def async_setup_entry(
         site_name = _favorite_location_name(entry, location_coordinator.data or {})
         site_slug = slugify(site_name)
         summary_sensor = FavoriteLocationSensor(hass, location_coordinator, entry)
-        async_add_entities([summary_sensor])
+        status_sensor = FavoriteLocationStatusSensor(hass, location_coordinator, entry, site_slug)
+        async_add_entities([summary_sensor, status_sensor])
 
         known_connectors: dict[str, list] = {}
         dashboard_card_added = False
@@ -136,7 +138,9 @@ async def async_setup_entry(
                         },
                         {
                             "type": "entities",
-                            "entities": _build_location_card_entities(hass, known_connectors, summary_sensor),
+                            "entities": _build_location_card_entities(
+                                hass, known_connectors, summary_sensor, status_sensor
+                            ),
                         },
                     ],
                 }
@@ -159,8 +163,13 @@ async def _async_add_dashboard_card(hass: HomeAssistant, entry: ConfigEntry, tit
         _LOGGER.exception("Automatic favorites-dashboard card setup failed for %s", title)
 
 
-def _build_location_card_entities(hass: HomeAssistant, known_connectors: dict[str, list], summary_sensor) -> list[dict]:
-    entities = [{"entity": summary_sensor.entity_id, "name": t("favorite_location_available_name", hass)}]
+def _build_location_card_entities(
+    hass: HomeAssistant, known_connectors: dict[str, list], summary_sensor, status_sensor
+) -> list[dict]:
+    entities = [
+        {"entity": summary_sensor.entity_id, "name": t("favorite_location_available_name", hass)},
+        {"entity": status_sensor.entity_id, "name": t("favorite_status_name", hass)},
+    ]
     for index, evse_id in enumerate(sorted(known_connectors), start=1):
         status_entity, power_entity, plug_entity, operator_entity, id_entity = known_connectors[evse_id]
         entities.append({"type": "section", "label": t("favorite_location_connector_prefix", hass, n=index)})
@@ -411,8 +420,13 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
             }
             for evse_id, c in location.get("connectors", {}).items()
         ]
+        status = site_status(location)
         return {
             "count_total": location.get("count_total", 0),
+            # Derived overall site status — "closed" distinguishes a non-24h
+            # site outside opening hours from a genuinely broken 24h site.
+            "site_status": status,
+            "site_status_text": localized_site_status(status, self._hass_ref),
             "operator": location.get("operator"),
             "street": location.get("street"),
             "city": location.get("city"),
@@ -422,6 +436,49 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
             "longitude": location.get("longitude"),
             "connectors": connectors,
         }
+
+
+class FavoriteLocationStatusSensor(CoordinatorEntity[FavoriteLocationCoordinator], SensorEntity):
+    """Derived overall status of the whole favorite site — "closed"
+    distinguishes a non-24h site outside opening hours from a genuinely
+    broken 24h site (the source has no opening-hours data, see
+    coordinator.site_status)."""
+
+    _attr_has_entity_name = False
+    _attr_attribution = ATTRIBUTION
+
+    _ICONS = {
+        "available": "mdi:ev-station",
+        "occupied": "mdi:car-electric",
+        "closed": "mdi:clock-remove-outline",
+        "out_of_service": "mdi:alert-circle-outline",
+    }
+
+    def __init__(
+        self, hass: HomeAssistant, coordinator: FavoriteLocationCoordinator, entry: ConfigEntry, site_slug: str
+    ) -> None:
+        super().__init__(coordinator)
+        self._hass_ref = hass
+        self._attr_name = t("favorite_status_name", hass)
+        self._attr_unique_id = f"{entry.entry_id}_site_status"
+        self._attr_device_info = device_info(hass, entry)
+        self.entity_id = f"sensor.charging_station_favorite_location_{site_slug}_status"
+
+    def _status(self) -> str:
+        return site_status(self.coordinator.data or {})
+
+    @property
+    def native_value(self):
+        return localized_site_status(self._status(), self._hass_ref)
+
+    @property
+    def icon(self):
+        return self._ICONS.get(self._status(), "mdi:help-circle-outline")
+
+    @property
+    def extra_state_attributes(self):
+        # Raw key for automations — the state itself is localized.
+        return {"site_status": self._status()}
 
 
 class FavoriteLocationConnectorStatusSensor(CoordinatorEntity[FavoriteLocationCoordinator], SensorEntity):

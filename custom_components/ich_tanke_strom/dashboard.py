@@ -23,6 +23,7 @@ from homeassistant.components.lovelace.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.storage import Store
 import voluptuous as vol
 
 from .const import DOMAIN
@@ -35,6 +36,13 @@ DASHBOARD_ICON = "mdi:ev-station"
 FAVORITES_VIEW_PATH = "favoriten"
 CARD_ENTRY_ID_KEY = "ich_tanke_strom_entry_id"
 
+# Persistent one-shot marker: once the dashboard has been auto-created, it is
+# never created again — if the user deletes it, that choice sticks (removing
+# its sidebar entry additionally needs one restart, a Home Assistant
+# limitation for integration-registered panels).
+_MARKER_STORE_VERSION = 1
+_MARKER_STORE_KEY = f"{DOMAIN}.dashboard"
+
 
 async def async_ensure_dashboard(hass: HomeAssistant) -> None:
     """Create the charging-stations dashboard if it doesn't exist yet (idempotent)."""
@@ -46,8 +54,22 @@ async def async_ensure_dashboard(hass: HomeAssistant) -> None:
         )
         return
 
+    store: Store = Store(hass, _MARKER_STORE_VERSION, _MARKER_STORE_KEY)
+    marker = await store.async_load()
+
     if DASHBOARD_URL_PATH in lovelace_data.dashboards:
-        return  # already exists — don't overwrite (respect any user edits)
+        # Already exists — don't overwrite (respect any user edits). Also
+        # backfill the marker for installations whose dashboard was created
+        # before the marker existed.
+        if not (marker and marker.get("created")):
+            await store.async_save({"created": True})
+        return
+
+    if marker and marker.get("created"):
+        # Auto-created once before but missing now — the user deleted it.
+        # Respect that and never re-create it.
+        _LOGGER.debug("Charging stations dashboard was deleted by the user — not re-creating it")
+        return
 
     title = t("dashboard_title", hass)
 
@@ -109,6 +131,7 @@ async def async_ensure_dashboard(hass: HomeAssistant) -> None:
         update=False,
     )
 
+    await store.async_save({"created": True})
     _LOGGER.info("Charging stations dashboard set up automatically at /%s", DASHBOARD_URL_PATH)
 
 

@@ -44,7 +44,13 @@ from .const import (
     FILTER_ALL,
     KNOWN_PLUG_TYPES,
 )
-from .coordinator import apply_filters, async_fetch_station_by_id, async_fetch_stations, group_by_location
+from .coordinator import (
+    apply_filters,
+    async_fetch_station_by_id,
+    async_fetch_station_location,
+    async_fetch_stations,
+    group_by_location,
+)
 from .localization import location_display_label, station_display_label, t
 
 CONF_MODE = "mode"
@@ -130,13 +136,22 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             if station_id:
                 try:
                     station = await async_fetch_station_by_id(self.hass, station_id)
+                    # Not an EvseID? Maybe it's a whole site's
+                    # ChargingStationId — then favorite the whole site.
+                    location_connectors = (
+                        None if station is not None else await async_fetch_station_location(self.hass, station_id)
+                    )
                 except Exception:
                     errors["base"] = "cannot_connect"
                 else:
-                    if station is None:
-                        errors[CONF_STATION_ID] = "station_not_found"
-                    else:
+                    if station is not None:
                         return await self._create_favorite_entry(station, user_input.get(CONF_FAVORITE_NAME))
+                    if location_connectors:
+                        self._favorite_candidates = location_connectors
+                        return await self._create_favorite_location_entry(
+                            station_id, user_input.get(CONF_FAVORITE_NAME)
+                        )
+                    errors[CONF_STATION_ID] = "station_not_found"
             else:
                 lat = user_input[CONF_LATITUDE]
                 lon = user_input[CONF_LONGITUDE]

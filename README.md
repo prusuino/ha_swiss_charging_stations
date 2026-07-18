@@ -46,7 +46,8 @@ A pre-filled card listing all five is also added automatically to a "Favorites" 
 
 | Entity | Type | Description |
 |---|---|---|
-| `sensor.charging_station_favorite_location_<name>` | Sensor | State = number of currently available charge points at the site. Attributes: total charge point count, address, and a `connectors` list with each charge point's own status, power (kW), and plug type. |
+| `sensor.charging_station_favorite_location_<name>` | Sensor | State = number of currently available charge points at the site. Attributes: total charge point count, derived site status, address, and a `connectors` list with each charge point's own status, power (kW), and plug type. |
+| `sensor.charging_station_favorite_location_<name>_status` | Sensor | Derived overall site status: available / occupied / **closed** (every connector out of service at a non-24h site — i.e. outside opening hours) / out of service (same, but at a 24h site). Localized state; raw `site_status` attribute for automations. |
 | `sensor.charging_station_favorite_location_<name>_connector_<n>_status` | Sensor | Current status of connector `<n>` at the site (available / occupied / out of service). |
 | `sensor.charging_station_favorite_location_<name>_connector_<n>_power_kw` | Sensor | Charging power (kW) of connector `<n>`. |
 | `sensor.charging_station_favorite_location_<name>_connector_<n>_plug_type` | Sensor | Plug type(s) of connector `<n>`. |
@@ -61,7 +62,7 @@ All favorite entities refresh live (every 5 minutes), independent of any radius 
 
 ## Bundled Lovelace card
 
-The integration ships its own Lovelace card, `swiss-charging-stations-card`, showing colored per-connector status boxes — green for available, red for occupied, gray for out of service — each box with the connector's plug type (abbreviated, e.g. "CCS" for CCS Combo 2), charging power, and status. It works for both favorite kinds: a whole site shows one box per connector plus an available/total badge; a single favorite station shows one box.
+The integration ships its own Lovelace card, `swiss-charging-stations-card`, showing colored per-connector status boxes — green for available, red for occupied, gray for out of service — each box with the connector's plug type (abbreviated, e.g. "CCS" for CCS Combo 2), charging power, and status. It works for both favorite kinds: a whole site shows one box per connector plus an available/total badge — or a "Closed"/"Out of service" badge when nothing at the site is in service; a single favorite station shows one box.
 
 ![Two favorite sites shown with the bundled card (status boxes per connector) above the auto-generated entities list](docs/card-example.png)
 
@@ -79,7 +80,7 @@ Entity names, the device name, and the dropdown filter values adapt automaticall
 
 ## Automatic dashboard
 
-On first setup, the integration automatically creates a **"Charging Stations"** dashboard (title localized to your HA language) with a full-screen native Home Assistant Map card, already configured to display each station's status directly on its marker. This only happens once: if you later customize or delete that dashboard yourself, the integration won't touch it again.
+On first setup, the integration automatically creates a **"Charging Stations"** dashboard (title localized to your HA language) with a full-screen native Home Assistant Map card, already configured to display each station's status directly on its marker. This only happens once: if you later customize or delete that dashboard yourself, the integration won't touch or re-create it. Note that after deleting it, its sidebar entry disappears with the next restart (a Home Assistant limitation for integration-registered panels).
 
 ![The auto-generated dashboard map: one marker per charging site, labeled with live availability](docs/map-example.png)
 
@@ -104,7 +105,7 @@ Favoriting a station or a whole site adds a second view, **"Favorites"**, to tha
 2. Search for **"Swiss Charging Stations (ich-tanke-strom.ch)"**.
 3. Choose a mode:
    - **Radius overview**: latitude/longitude default to your Home Assistant home location, set the radius (km). Done — add the integration again for a different location or radius. Adjust the filters afterwards via the `number`/`select` entities.
-   - **Favorite station**: enter the station's EvseID directly (e.g. from a QR code on the charger, or looked up on ich-tanke-strom.ch), or leave it empty and search near a location instead — optionally narrowed by minimum power and plug type — then pick one from the resulting list. The list also includes whole sites (marked with 📍 and their charge point count) alongside individual connectors — pick one of those instead to favorite the entire site. Add the integration again for another favorite.
+   - **Favorite station**: enter the station's EvseID directly (e.g. from a QR code on the charger, or looked up on ich-tanke-strom.ch) — the same field also accepts a whole-site ChargingStationId, creating a favorite site directly — or leave it empty and search near a location instead — optionally narrowed by minimum power and plug type — then pick one from the resulting list. The list also includes whole sites (marked with 📍 and their charge point count) alongside individual connectors — pick one of those instead to favorite the entire site. Add the integration again for another favorite.
 
 ## Notes
 

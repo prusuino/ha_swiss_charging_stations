@@ -27,8 +27,8 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, MAX_MAP_MARKERS
-from .coordinator import IchTankeStromCoordinator, icon_for_status
-from .localization import localized_status, t
+from .coordinator import IchTankeStromCoordinator, icon_for_status, site_status
+from .localization import localized_site_status, localized_status, t
 
 _LOGGER = logging.getLogger(__name__)
 SOURCE = "ich_tanke_strom"
@@ -149,12 +149,19 @@ class ChargingSiteEvent(GeolocationEvent):
 
     def _status_label(self) -> str:
         """The map-marker label: a single connector shows its plain status,
-        a multi-connector site shows availability as "free/total"."""
+        a multi-connector site shows availability as "free/total" — or the
+        derived site status when nothing is in service ("closed" for a
+        non-24h site outside opening hours, "out of service" otherwise)."""
         location = self._location
         connectors = location.get("connectors", {})
         if len(connectors) <= 1:
             only = next(iter(connectors.values()), {})
+            if only.get("status") == "OutOfService" and not location.get("open_24h"):
+                return localized_site_status("closed", self._hass_ref)
             return localized_status(only.get("status"), self._hass_ref)
+        status = site_status(location)
+        if status in ("closed", "out_of_service"):
+            return localized_site_status(status, self._hass_ref)
         return t(
             "map_label_free",
             self._hass_ref,

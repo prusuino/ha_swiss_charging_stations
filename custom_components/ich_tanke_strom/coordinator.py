@@ -304,6 +304,23 @@ def group_by_location(stations: dict[str, dict]) -> dict[str, dict]:
     return merged
 
 
+def site_status(location: dict) -> str:
+    """Derived overall status of a whole site. The source has no opening
+    hours, but "every connector OutOfService at a non-24h site" reliably
+    means "closed (outside opening hours)" — distinct from a genuinely
+    broken 24h site. Returns one of: available / occupied / closed /
+    out_of_service / unknown."""
+    connectors = location.get("connectors", {})
+    statuses = {c.get("status") for c in connectors.values()}
+    if "Available" in statuses:
+        return "available"
+    if "Occupied" in statuses:
+        return "occupied"
+    if statuses and statuses <= {"OutOfService"}:
+        return "out_of_service" if location.get("open_24h") else "closed"
+    return "unknown"
+
+
 def icon_for_status(status: str | None) -> str:
     if status == "Available":
         return "mdi:ev-station"

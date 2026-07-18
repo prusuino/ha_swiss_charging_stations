@@ -20,6 +20,16 @@ const UNKNOWN_COLOR = "var(--warning-color, #f9a825)";
 
 const AVAILABLE_WORD = { de: "frei", en: "available", fr: "libre", it: "liberi" };
 
+const SITE_STATUS_WORDS = {
+  closed: { de: "Geschlossen", en: "Closed", fr: "Fermée", it: "Chiusa" },
+  out_of_service: {
+    de: "Ausser Betrieb",
+    en: "Out of service",
+    fr: "Hors service",
+    it: "Fuori servizio",
+  },
+};
+
 const TYPE_WORD = { de: "Typ", en: "Type", fr: "Type", it: "Tipo" };
 const CABLE_WORD = { de: "Kabel", en: "cable", fr: "câble", it: "cavo" };
 
@@ -178,11 +188,19 @@ class SwissChargingStationsCard extends HTMLElement {
 
     let boxes;
     let badge = "";
+    let badgeAlert = false;
     if (isSite) {
       const total = attrs.count_total || attrs.connectors.length;
       const available = Number(stateObj.state) || 0;
-      const word = AVAILABLE_WORD[this._lang()] || AVAILABLE_WORD.en;
-      badge = `${available}/${total} ${word}`;
+      const siteWords = SITE_STATUS_WORDS[attrs.site_status];
+      if (siteWords) {
+        // Whole site closed / out of service — show the reason instead of "0/6".
+        badge = siteWords[this._lang()] || siteWords.en;
+        badgeAlert = true;
+      } else {
+        const word = AVAILABLE_WORD[this._lang()] || AVAILABLE_WORD.en;
+        badge = `${available}/${total} ${word}`;
+      }
       boxes = attrs.connectors.map((c, i) =>
         this._box(
           c.status_raw,
@@ -222,6 +240,10 @@ class SwissChargingStationsCard extends HTMLElement {
           background: var(--secondary-background-color, rgba(127,127,127,.15));
           color: var(--primary-text-color);
         }
+        .badge.alert {
+          background: var(--disabled-text-color, #757575);
+          color: #fff;
+        }
         .addr {
           font-size: 0.85em; color: var(--secondary-text-color);
           margin-bottom: 12px;
@@ -246,7 +268,7 @@ class SwissChargingStationsCard extends HTMLElement {
         <div class="wrap">
           <div class="head">
             <div class="title">${this._escape(title)}</div>
-            ${badge ? `<div class="badge">${this._escape(badge)}</div>` : ""}
+            ${badge ? `<div class="badge${badgeAlert ? " alert" : ""}">${this._escape(badge)}</div>` : ""}
           </div>
           ${address ? `<div class="addr">${this._escape(address)}</div>` : ""}
           <div class="grid">${boxes.join("")}</div>

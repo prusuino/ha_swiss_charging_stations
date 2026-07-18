@@ -21,7 +21,7 @@
         "title": "Borne favorite",
         "description": "Entrez directement l'EvseID de la borne (par ex. via un QR code sur la borne, ou recherché sur ich-tanke-strom.ch), ou laissez vide et cherchez plutôt près d'un emplacement — vous obtiendrez une liste à choisir sur l'écran suivant. Ajoutez à nouveau l'intégration pour une autre favorite.",
         "data": {
-          "station_id": "EvseID de la borne (optionnel — laisser vide pour rechercher à la place)",
+          "station_id": "EvseID de la borne ou ChargingStationId du site (optionnel — laisser vide pour rechercher à la place)",
           "latitude": "Latitude (utilisée seulement si EvseID est vide)",
           "longitude": "Longitude (utilisée seulement si EvseID est vide)",
           "radius_km": "Rayon de recherche (km, max. 30 — utilisé seulement si l'EvseID est vide)",

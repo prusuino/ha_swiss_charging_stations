@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0 — 2026-07-18
+
+- New: whole-site favorites get a derived **overall status** — "Available", "Occupied", "Closed", or "Out of service". The source has no opening-hours data, but "every connector out of service at a non-24h site" reliably means closed outside opening hours, distinct from a genuinely broken 24h site. Shown as its own status sensor (localized state, raw `site_status` attribute for automations) listed right below the available-count on the auto-generated dashboard card, as a badge on the bundled card (replacing "0/6 available"), and as the map marker label on the radius view.
+- New: a favorite can now be added by **site ID** — the ID field of the favorite setup accepts a whole-site ChargingStationId in addition to a single charge point's EvseID, creating a whole-site favorite directly without searching by location.
+- Fixed: the auto-created dashboard came back after a restart if you had deleted it. It is now created only once — deleting it sticks. Note that removing its sidebar entry additionally needs one restart (a Home Assistant limitation for integration-registered panels).
+
 ## 1.4.0 — 2026-07-17
 
 - Changed: the radius map now shows **one marker per charging site** instead of one per charge point — connectors at the same location are grouped (same logic as the favorite picker), so multi-charger sites no longer stack indistinguishable markers on identical coordinates. Multi-connector sites are labeled with their availability ("6/7 available", localized), single chargers keep their plain status label. Markers are now refreshed in place on every update, so the labels stay live. Leftover per-connector marker entities from earlier versions are cleaned up automatically.

@@ -128,6 +128,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Inconnu",
         "it": "Sconosciuto",
     },
+    "site_status_closed": {
+        "de": "Geschlossen",
+        "en": "Closed",
+        "fr": "Fermée",
+        "it": "Chiusa",
+    },
     "mode_radius": {
         "de": "Umkreis-Übersicht (mehrere Stationen, Live-Filter)",
         "en": "Radius overview (multiple stations, live filters)",
@@ -241,6 +247,21 @@ def localized_status(raw_status: str | None, hass: HomeAssistant) -> str:
     """Translate a raw EvseStatus API value for display. Filtering logic must
     keep using the raw value — only use this for user-facing attributes."""
     key = STATUS_KEY_MAP.get(raw_status or "", "status_unknown")
+    return t(key, hass)
+
+
+SITE_STATUS_KEY_MAP: dict[str, str] = {
+    "available": "status_available",
+    "occupied": "status_occupied",
+    "closed": "site_status_closed",
+    "out_of_service": "status_out_of_service",
+}
+
+
+def localized_site_status(status: str | None, hass: HomeAssistant) -> str:
+    """Display text for the derived whole-site status (see
+    coordinator.site_status)."""
+    key = SITE_STATUS_KEY_MAP.get(status or "", "status_unknown")
     return t(key, hass)
 
 

@@ -21,7 +21,7 @@
         "title": "Favorite station",
         "description": "Enter the station's EvseID directly (e.g. from a QR code on the charger, or looked up on ich-tanke-strom.ch), or leave it empty and search near a location instead — you'll get a list to pick from on the next screen. Add the integration again for another favorite.",
         "data": {
-          "station_id": "Station EvseID (optional — leave empty to search instead)",
+          "station_id": "Station EvseID or whole-site ChargingStationId (optional — leave empty to search instead)",
           "latitude": "Latitude (used only if EvseID is empty)",
           "longitude": "Longitude (used only if EvseID is empty)",
           "radius_km": "Search radius (km, max. 30 — used only if EvseID is empty)",
