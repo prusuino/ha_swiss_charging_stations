@@ -279,21 +279,20 @@ def _build_location_card_entities(
             "icon": "mdi:clock-outline",
         },
     ]
-    # Per-plug-type available counts — only worth a row when the site
-    # actually mixes plug types; with a single type the row would just
-    # repeat the overall count above.
-    if len(known_plug_sensors) > 1:
-        for plug_type in sorted(known_plug_sensors):
-            entities.append(
-                {
-                    "entity": known_plug_sensors[plug_type].entity_id,
-                    "name": t(
-                        "favorite_location_available_plug_name",
-                        hass,
-                        plug=PLUG_TYPE_SHORT_LABELS.get(plug_type, plug_type),
-                    ),
-                }
-            )
+    # Per-plug-type available counts — also shown for single-type sites,
+    # where the row nominally repeats the overall count: naming the plug
+    # type makes the card easier to understand at a glance (user request).
+    for plug_type in sorted(known_plug_sensors):
+        entities.append(
+            {
+                "entity": known_plug_sensors[plug_type].entity_id,
+                "name": t(
+                    "favorite_location_available_plug_name",
+                    hass,
+                    plug=PLUG_TYPE_SHORT_LABELS.get(plug_type, plug_type),
+                ),
+            }
+        )
     for index, evse_id in enumerate(sorted(known_connectors), start=1):
         status_entity, power_entity, plug_entity, operator_entity, id_entity = known_connectors[evse_id]
         entities.append({"type": "section", "label": t("favorite_location_connector_prefix", hass, n=index)})
