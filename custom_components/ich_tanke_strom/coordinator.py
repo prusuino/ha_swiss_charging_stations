@@ -10,7 +10,8 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
-from datetime import timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -99,6 +100,7 @@ def _parse_station(feature: dict, lat: float | None = None, lon: float | None = 
         "postal_code": address.get("PostalCode"),
         "last_update": props.get("lastUpdate"),
         "open_24h": props.get("IsOpen24Hours"),
+        "opening_times": [o for o in _as_list(props.get("OpeningTimes")) if isinstance(o, dict)],
         "payment_options": props.get("PaymentOptions") or [],
     }
 
@@ -123,7 +125,7 @@ async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radi
         "propertyName": (
             "EvseID,ChargingStationId,EvseStatus,ChargingFacilities,Plugs,"
             "Address,ChargingStationNames,OperatorID,lastUpdate,IsOpen24Hours,"
-            "PaymentOptions,geometry"
+            "OpeningTimes,PaymentOptions,geometry"
         ),
         "cql_filter": f"bbox(geometry,{bbox})",
     }
@@ -226,6 +228,32 @@ async def async_fetch_station_location(hass: HomeAssistant, charging_station_id:
     return stations
 
 
+SITE_RESOLVE_RADIUS_KM = 0.3
+
+
+async def async_resolve_site(hass: HomeAssistant, station: dict) -> dict | None:
+    """Expand one resolved connector to its full physical site.
+
+    A direct EvseID or ChargingStationId lookup can under-count a site:
+    several operators give each pole (Migros: CH*MIG*P*1797 vs *1813) or even
+    each connector (aggregators, where ChargingStationId == EvseID) its own
+    id, so only the operator+address merge in group_by_location sees the
+    whole site. Fetch everything within a small radius around the connector's
+    coordinates, group it, and return the merged group containing the
+    connector — or None if it can't be resolved (caller falls back to the
+    ungrouped result).
+    """
+    lat, lon = station.get("latitude"), station.get("longitude")
+    evse_id = station.get("evse_id")
+    if lat is None or lon is None or not evse_id:
+        return None
+    nearby = await async_fetch_stations(hass, lat, lon, SITE_RESOLVE_RADIUS_KM)
+    for group in group_by_location(nearby).values():
+        if evse_id in group["connectors"]:
+            return group
+    return None
+
+
 def _address_key(street: str | None, postal_code: str | None, city: str | None) -> str | None:
     parts = [(street or "").strip().lower(), (postal_code or "").strip().lower(), (city or "").strip().lower()]
     if not any(parts):
@@ -298,20 +326,76 @@ def group_by_location(stations: dict[str, dict]) -> dict[str, dict]:
         g["longitude"] = first.get("longitude")
         g["distance_km"] = first.get("distance_km")
         g["open_24h"] = first.get("open_24h")
+        g["opening_times"] = first.get("opening_times") or []
         g["count_total"] = len(connectors)
         g["count_available"] = sum(1 for c in connectors.values() if c.get("status") == "Available")
         g.setdefault("is_synthetic", False)
     return merged
 
 
+def _parse_hhmm(value) -> int | None:
+    """'HH:MM' -> minutes since midnight, None if unparseable."""
+    try:
+        hours, minutes = str(value).split(":")
+        return int(hours) * 60 + int(minutes)
+    except (ValueError, AttributeError):
+        return None
+
+
+def is_open_now(opening_times: list | None, now: datetime | None = None) -> bool | None:
+    """Evaluate the source's structured OpeningTimes schedule.
+
+    Format (observed live, e.g. Migros):
+    [{"on": "Saturday", "Period": [{"begin": "07:30", "end": "20:00"}]}, ...]
+
+    Stations are all in Switzerland, so the schedule is evaluated in
+    Europe/Zurich regardless of the HA instance's timezone. Returns None
+    when no schedule data is present (24h sites leave OpeningTimes empty) —
+    callers must treat that as "unknown", not "closed". A weekday absent
+    from a non-empty schedule counts as closed on that day.
+    """
+    if not opening_times:
+        return None
+    try:
+        now = now or datetime.now(ZoneInfo("Europe/Zurich"))
+        weekday = now.strftime("%A")
+        minutes = now.hour * 60 + now.minute
+        for entry in opening_times:
+            if not isinstance(entry, dict) or entry.get("on") != weekday:
+                continue
+            for period in _as_list(entry.get("Period")):
+                if not isinstance(period, dict):
+                    continue
+                begin = _parse_hhmm(period.get("begin"))
+                end = _parse_hhmm(period.get("end"))
+                if begin is None or end is None:
+                    continue
+                if begin <= end:
+                    if begin <= minutes < end:
+                        return True
+                # Overnight period (e.g. 22:00-06:00) wraps past midnight
+                elif minutes >= begin or minutes < end:
+                    return True
+        return False
+    except Exception:  # noqa: BLE001 - malformed schedule data must never break a refresh
+        return None
+
+
 def site_status(location: dict) -> str:
-    """Derived overall status of a whole site. The source has no opening
-    hours, but "every connector OutOfService at a non-24h site" reliably
-    means "closed (outside opening hours)" — distinct from a genuinely
-    broken 24h site. Returns one of: available / occupied / closed /
-    out_of_service / unknown."""
+    """Derived overall status of a whole site. Returns one of:
+    available / occupied / closed / out_of_service / unknown.
+
+    Closed is detected two ways: (1) the structured OpeningTimes schedule
+    says the site is currently outside its opening hours — this wins even
+    over Available connectors, since some operators keep reporting Available
+    while the site is inaccessible (user report, 2026-07-19); (2) no
+    schedule data, but every connector is OutOfService at a non-24h site —
+    that pattern reliably means "closed right now" as opposed to a genuinely
+    broken 24h site."""
     connectors = location.get("connectors", {})
     statuses = {c.get("status") for c in connectors.values()}
+    if not location.get("open_24h") and is_open_now(location.get("opening_times")) is False:
+        return "closed"
     if "Available" in statuses:
         return "available"
     if "Occupied" in statuses:

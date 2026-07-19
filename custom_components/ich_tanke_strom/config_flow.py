@@ -49,6 +49,7 @@ from .coordinator import (
     async_fetch_station_by_id,
     async_fetch_station_location,
     async_fetch_stations,
+    async_resolve_site,
     group_by_location,
 )
 from .localization import location_display_label, station_display_label, t
@@ -56,6 +57,10 @@ from .localization import location_display_label, station_display_label, t
 CONF_MODE = "mode"
 MODE_RADIUS = "radius"
 MODE_FAVORITE = "favorite"
+
+CONF_FAVORITE_SCOPE = "favorite_scope"
+SCOPE_SINGLE = "single"
+SCOPE_SITE = "site"
 
 _LOCATION_PREFIX = "LOCATION:"  # sentinel prefix for a whole-location pick — never collides with a real EvseID
 
@@ -74,6 +79,11 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         self._favorite_candidates: dict[str, dict] = {}
+        # Carried between favorite -> favorite_scope when an entered EvseID
+        # turns out to sit at a multi-connector site.
+        self._pending_station: dict | None = None
+        self._pending_site: dict | None = None
+        self._pending_name: str | None = None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if user_input is not None:
@@ -145,11 +155,39 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "cannot_connect"
                 else:
                     if station is not None:
+                        # The EvseID names one connector, but the physical
+                        # site may hold more — several operators give each
+                        # pole or even each connector its own id, so only
+                        # the operator+address merge sees the whole site
+                        # (user report 2026-07-19: 1 of 3 / 1 of 8 shown).
+                        # Resolve the site and let the user pick the scope.
+                        try:
+                            site = await async_resolve_site(self.hass, station)
+                        except Exception:
+                            site = None  # best-effort — fall back to the single connector
+                        if site and site["count_total"] > 1:
+                            self._pending_station = station
+                            self._pending_site = site
+                            self._pending_name = user_input.get(CONF_FAVORITE_NAME)
+                            return await self.async_step_favorite_scope()
                         return await self._create_favorite_entry(station, user_input.get(CONF_FAVORITE_NAME))
                     if location_connectors:
-                        self._favorite_candidates = location_connectors
+                        # A ChargingStationId lookup can also under-count the
+                        # site (Migros: one real id per pole at the same
+                        # address) — expand through the merge when it finds
+                        # more connectors than the direct lookup did.
+                        connectors = location_connectors
+                        location_id = station_id
+                        try:
+                            site = await async_resolve_site(self.hass, next(iter(location_connectors.values())))
+                        except Exception:
+                            site = None
+                        if site and len(site["connectors"]) > len(location_connectors):
+                            connectors = site["connectors"]
+                            location_id = site["location_id"]
+                        self._favorite_candidates = connectors
                         return await self._create_favorite_location_entry(
-                            station_id, user_input.get(CONF_FAVORITE_NAME)
+                            location_id, user_input.get(CONF_FAVORITE_NAME)
                         )
                     errors[CONF_STATION_ID] = "station_not_found"
             else:
@@ -194,6 +232,48 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             }
         )
         return self.async_show_form(step_id="favorite", data_schema=schema, errors=errors)
+
+    async def async_step_favorite_scope(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """The entered EvseID names one charge point at a multi-connector
+        site — ask whether to pin just that charge point or the whole site."""
+        site = self._pending_site
+        station = self._pending_station
+        if site is None or station is None:
+            return await self.async_step_favorite()
+
+        if user_input is not None:
+            name = user_input.get(CONF_FAVORITE_NAME) or self._pending_name
+            if user_input[CONF_FAVORITE_SCOPE] == SCOPE_SITE:
+                self._favorite_candidates = site["connectors"]
+                return await self._create_favorite_location_entry(site["location_id"], name)
+            return await self._create_favorite_entry(station, name)
+
+        count = site.get("count_total") or len(site["connectors"])
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_FAVORITE_SCOPE, default=SCOPE_SITE): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(
+                                value=SCOPE_SITE, label=t("favorite_scope_site", self.hass, count=count)
+                            ),
+                            SelectOptionDict(value=SCOPE_SINGLE, label=t("favorite_scope_single", self.hass)),
+                        ],
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
+                vol.Optional(CONF_FAVORITE_NAME, default=""): str,
+            }
+        )
+        return self.async_show_form(
+            step_id="favorite_scope",
+            data_schema=schema,
+            description_placeholders={
+                "site": site.get("station_name") or f"{site.get('street') or ''} {site.get('city') or ''}".strip(),
+                "count": str(count),
+                "evse_id": station.get("evse_id") or "",
+            },
+        )
 
     async def async_step_favorite_pick(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Pick either a single charge point or a whole physical site (all

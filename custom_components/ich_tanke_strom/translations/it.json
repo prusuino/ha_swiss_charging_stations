@@ -36,6 +36,14 @@
           "station_id": "Stazione",
           "favorite_name": "Nome personalizzato (opzionale)"
         }
+      },
+      "favorite_scope": {
+        "title": "Un singolo punto di ricarica o l'intero sito?",
+        "description": "{evse_id} è uno dei {count} punti di ricarica del sito {site}. Aggiungere ai preferiti solo questo punto di ricarica o l'intero sito con tutti i suoi punti?",
+        "data": {
+          "favorite_scope": "Ambito",
+          "favorite_name": "Nome personalizzato (opzionale)"
+        }
       }
     },
     "abort": {

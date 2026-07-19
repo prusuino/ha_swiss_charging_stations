@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.0 — 2026-07-19
+
+- Fixed: adding a favorite by ID no longer under-counts the site (user report: 2 of 4, 1 of 3, 1 of 8 charge points shown). Several operators give each pole (e.g. `CH*MIG*P*1797` vs `*1813`) or even each connector (aggregators, where the site ID equals the EvseID) its own ID, so a direct ID lookup only ever saw a slice of the site. The ID path now resolves the full physical site through the same operator+address merge the search picker has used since v1.2.1: a site ChargingStationId expands to all connectors at that address automatically, and an EvseID whose site has more charge points opens a new choice step — pin just that charge point, or the whole site (default).
+- Improved: site status now evaluates the source's structured `OpeningTimes` schedule (present for some operators, e.g. Migros; evaluated in the Swiss timezone). A site outside its opening hours shows as "Closed" even while its connectors still report "Available" — previously closed sites could look available. Sites without schedule data keep the existing every-connector-out-of-service heuristic; 24h sites are unaffected.
+
 ## 1.5.0 — 2026-07-18
 
 - New: whole-site favorites get a derived **overall status** — "Available", "Occupied", "Closed", or "Out of service". The source has no opening-hours data, but "every connector out of service at a non-24h site" reliably means closed outside opening hours, distinct from a genuinely broken 24h site. Shown as its own status sensor (localized state, raw `site_status` attribute for automations) listed right below the available-count on the auto-generated dashboard card, as a badge on the bundled card (replacing "0/6 available"), and as the map marker label on the radius view.

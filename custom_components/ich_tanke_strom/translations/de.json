@@ -36,6 +36,14 @@
           "station_id": "Station",
           "favorite_name": "Eigener Name (optional)"
         }
+      },
+      "favorite_scope": {
+        "title": "Einzelner Ladepunkt oder ganzer Standort?",
+        "description": "{evse_id} ist einer von {count} Ladepunkten am Standort {site}. Nur diesen Ladepunkt favorisieren oder den ganzen Standort mit allen Ladepunkten?",
+        "data": {
+          "favorite_scope": "Umfang",
+          "favorite_name": "Eigener Name (optional)"
+        }
       }
     },
     "abort": {

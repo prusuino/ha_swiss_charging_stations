@@ -36,6 +36,14 @@
           "station_id": "Station",
           "favorite_name": "Custom name (optional)"
         }
+      },
+      "favorite_scope": {
+        "title": "One charge point or the whole site?",
+        "description": "{evse_id} is one of {count} charge points at {site}. Pin only this charge point, or the whole site with all its charge points?",
+        "data": {
+          "favorite_scope": "Scope",
+          "favorite_name": "Custom name (optional)"
+        }
       }
     },
     "abort": {

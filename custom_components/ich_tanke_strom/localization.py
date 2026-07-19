@@ -218,6 +218,18 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Favoris",
         "it": "Preferiti",
     },
+    "favorite_scope_site": {
+        "de": "Ganzen Standort favorisieren ({count} Ladepunkte)",
+        "en": "Favorite the whole site ({count} charge points)",
+        "fr": "Ajouter tout le site aux favoris ({count} points de charge)",
+        "it": "Aggiungi l'intero sito ai preferiti ({count} punti di ricarica)",
+    },
+    "favorite_scope_single": {
+        "de": "Nur diesen einen Ladepunkt favorisieren",
+        "en": "Favorite only this single charge point",
+        "fr": "Ajouter uniquement ce point de charge aux favoris",
+        "it": "Aggiungi solo questo punto di ricarica ai preferiti",
+    },
 }
 
 # Maps the raw EvseStatus values from the ich-tanke-strom.ch API to a
