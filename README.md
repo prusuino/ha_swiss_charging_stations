@@ -66,17 +66,25 @@ All favorite entities refresh live (every 5 minutes), independent of any radius 
 
 ## Bundled Lovelace card
 
-The integration ships its own Lovelace card, `swiss-charging-stations-card`, showing colored per-connector status boxes — green for available, red for occupied, gray for out of service, blue while the site is closed (outside its opening hours), yellow when the operator reports no usable status — each box with the connector's plug type (abbreviated, e.g. "CCS" for CCS Combo 2), charging power, and status. It works for both favorite kinds: a whole site shows one box per connector plus an available/total badge — or a "Closed"/"Out of service" badge when nothing at the site is in service; a single favorite station shows one box.
+The integration ships its own Lovelace card, `swiss-charging-stations-card`, showing colored per-connector status boxes — green for available, red for occupied, gray for out of service, blue while the site is closed (outside its opening hours), yellow when the operator reports no usable status — each box with the connector's plug type (abbreviated, e.g. "CCS" for CCS Combo 2), charging power, and status. Clicking a box opens the connector's more-info dialog.
+
+The header shows the site name, its address, and the weekly opening hours with consecutive days collapsed ("Mon–Fri 08:00–20:00 · Sat 07:30–18:00", or "Open 24 h"; omitted when the source has no schedule data). The badge in the corner shows live availability ("3/8 available" — green while at least one connector is free, red when all are taken) and switches to "Closed" outside opening hours, "Closed today" on full-day closures (e.g. Sundays), or "Out of service" when nothing at the site is in service.
+
+It works for both favorite kinds: a whole site shows one box per connector; a single favorite station shows one box.
 
 ![Favorite sites shown with the bundled card (status boxes per connector) above the auto-generated entities list with per-plug-type availability, status, and opening hours](docs/card-example.png)
 
-The card registers itself automatically (no manual resource setup) and is used on the auto-generated "Favorites" dashboard view. It is also available in the card picker as **Swiss Charging Stations Card** for use anywhere else:
+The card registers itself automatically (no manual resource setup) and is used on the auto-generated "Favorites" dashboard view. It is also available in the card picker as **Swiss Charging Stations Card** for use anywhere else, with a visual editor for all options:
 
 ```yaml
 type: custom:swiss-charging-stations-card
 entity: sensor.charging_station_favorite_location_<name>  # or a single favorite's status sensor
 title: My charging site  # optional
+plug_types:  # optional: show only these plug types (multi-select in the visual editor)
+  - CCS Combo 2 Plug (Cable Attached)
 ```
+
+With a `plug_types` filter, boxes of other plug types are hidden and the availability badge counts only the visible connectors (e.g. "1/2 available" for just the CCS chargers of a mixed site). The filter is purely visual — the favorite, its sensors, and the dashboard entities list keep covering the whole site.
 
 ## Language
 
