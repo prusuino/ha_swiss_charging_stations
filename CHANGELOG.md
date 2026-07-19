@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.6.0 — 2026-07-19
+## 1.6.1 — 2026-07-19
 
 - Fixed: adding a favorite by ID no longer under-counts the site (user report: 2 of 4, 1 of 3, 1 of 8 charge points shown). Several operators give each pole (e.g. `CH*MIG*P*1797` vs `*1813`) or even each connector (aggregators, where the site ID equals the EvseID) its own ID, so a direct ID lookup only ever saw a slice of the site. The ID path now resolves the full physical site through the same operator+address merge the search picker has used since v1.2.1: a site ChargingStationId expands to all connectors at that address automatically, and an EvseID whose site has more charge points opens a new choice step — pin just that charge point, or the whole site (default).
 - New: adding a favorite by ID now ends in a **confirmation step** showing what was resolved (the site with its charge-point count, or the single charge point) with an optional **custom name** field — previously the ID path created the favorite immediately and never offered naming (that only existed in the location search picker).
