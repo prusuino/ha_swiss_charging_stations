@@ -33,6 +33,7 @@ from .coordinator import (
     FavoriteStationCoordinator,
     IchTankeStromCoordinator,
     icon_for_status,
+    is_closed_all_day_today,
     site_status,
     weekly_opening_periods,
 )
@@ -324,6 +325,7 @@ class FavoriteStationSensor(CoordinatorEntity[FavoriteStationCoordinator], Senso
             "postal_code": station.get("postal_code"),
             "open_24h": station.get("open_24h"),
             "opening_hours": _opening_hours_display(station, self._hass_ref),
+            "closed_all_day_today": is_closed_all_day_today(station),
             "payment_options": station.get("payment_options"),
             "last_update": station.get("last_update"),
             "latitude": station.get("latitude"),
@@ -487,6 +489,9 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
             "postal_code": location.get("postal_code"),
             "open_24h": location.get("open_24h"),
             "opening_hours": _opening_hours_display(location, self._hass_ref),
+            # True on full-day closures (e.g. Sundays) — the card badge says
+            # "closed today" instead of just "closed" then.
+            "closed_all_day_today": is_closed_all_day_today(location),
             "latitude": location.get("latitude"),
             "longitude": location.get("longitude"),
             "connectors": connectors,

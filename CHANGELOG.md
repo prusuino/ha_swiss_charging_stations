@@ -1,7 +1,8 @@
 # Changelog
 
-## 1.6.2 — 2026-07-19
+## 1.6.3 — 2026-07-19
 
+- Changed: the card badge distinguishes full-day closures from being outside today's hours — "Closed today" (localized) when the schedule has no opening periods for today at all (e.g. Sundays), plain "Closed" otherwise. Exposed as a `closed_all_day_today` attribute on the favorite status/overview sensors.
 - Changed: while a site is closed (outside its opening hours), the bundled card now shows every connector tile in blue with "Closed" instead of green "Available" (user report: the operator keeps reporting Available, which is technically correct from the API's perspective, but you can't charge right now — misleading if you only glance at the green tiles). Blue is a distinct fourth color next to green (available), red (occupied), and gray (out of service); the closed badge uses it too. The underlying sensors keep reporting the raw operator status for automations; single-favorite cards get the same treatment via a new `site_status` attribute on the favorite status sensor.
 - Changed: the opening-hours line now shows the full weekly schedule with consecutive days collapsed ("Mon–Fri 08:00–20:00 · Sat 07:30–18:00", localized weekday names) instead of only today's hours — the current open/closed state is already covered by the status. The sensor attribute is renamed from `opening_hours_today` to `opening_hours` accordingly.
 

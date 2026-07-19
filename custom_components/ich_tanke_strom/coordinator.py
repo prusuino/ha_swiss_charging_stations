@@ -407,6 +407,20 @@ def weekly_opening_periods(opening_times: list | None) -> dict[int, list[str]] |
         return None
 
 
+def is_closed_all_day_today(location: dict, now: datetime | None = None) -> bool:
+    """True when the schedule marks today as fully closed (no opening
+    periods at all, e.g. Sundays at supermarket sites) — lets UIs say
+    "closed today" instead of just "closed" (which also covers being
+    outside today's hours)."""
+    if location.get("open_24h"):
+        return False
+    week = weekly_opening_periods(location.get("opening_times"))
+    if not week:
+        return False
+    now = now or datetime.now(ZoneInfo("Europe/Zurich"))
+    return not week.get(now.weekday())
+
+
 def site_status(location: dict) -> str:
     """Derived overall status of a whole site. Returns one of:
     available / occupied / closed / out_of_service / unknown.

@@ -23,6 +23,13 @@ const UNKNOWN_COLOR = "var(--warning-color, #f9a825)";
 
 const AVAILABLE_WORD = { de: "frei", en: "available", fr: "libre", it: "liberi" };
 
+const CLOSED_TODAY_WORDS = {
+  de: "Heute geschlossen",
+  en: "Closed today",
+  fr: "Fermé aujourd'hui",
+  it: "Chiuso oggi",
+};
+
 const SITE_STATUS_WORDS = {
   closed: { de: "Geschlossen", en: "Closed", fr: "Fermée", it: "Chiusa" },
   out_of_service: {
@@ -208,8 +215,14 @@ class SwissChargingStationsCard extends HTMLElement {
       const available = Number(stateObj.state) || 0;
       const siteWords = SITE_STATUS_WORDS[attrs.site_status];
       if (siteWords) {
-        // Whole site closed / out of service — show the reason instead of "0/6".
-        badge = siteWords[this._lang()] || siteWords.en;
+        // Whole site closed / out of service — show the reason instead of
+        // "0/6". Full-day closures (e.g. Sundays) say "closed today" so the
+        // schedule-driven closure reads differently from being outside
+        // today's hours.
+        badge =
+          siteClosed && attrs.closed_all_day_today
+            ? CLOSED_TODAY_WORDS[this._lang()] || CLOSED_TODAY_WORDS.en
+            : siteWords[this._lang()] || siteWords.en;
         badgeAlert = true;
       } else {
         const word = AVAILABLE_WORD[this._lang()] || AVAILABLE_WORD.en;
