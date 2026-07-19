@@ -61,6 +61,35 @@ def _card_entity(card: dict) -> str | None:
     return None
 
 
+def _merge_preserving_user_edits(existing: dict, new: dict) -> dict:
+    """Take the freshly generated card (current connector/entity lists) but
+    keep whatever the user customized on the bundled custom card — e.g. a
+    plug-type filter or changed title set via the visual editor. The restart
+    upsert used to replace the whole card, silently dropping those edits
+    (user report, 2026-07-19). Only `type` and `entity` are forced from the
+    fresh card; the entities card below stays fully integration-managed so
+    connector changes keep syncing."""
+    existing_inner = existing.get("cards")
+    new_inner = new.get("cards")
+    if not (isinstance(existing_inner, list) and isinstance(new_inner, list) and new_inner):
+        return new
+    if not (
+        existing_inner
+        and isinstance(existing_inner[0], dict)
+        and isinstance(new_inner[0], dict)
+        and str(existing_inner[0].get("type", "")).startswith("custom:")
+    ):
+        return new
+    merged_inner = list(new_inner)
+    merged_inner[0] = {
+        **existing_inner[0],
+        "type": new_inner[0].get("type"),
+        "entity": new_inner[0].get("entity"),
+    }
+    merged_inner[0].pop(CARD_ENTRY_ID_KEY, None)  # never re-inherit the legacy marker
+    return {**new, "cards": merged_inner}
+
+
 async def async_ensure_dashboard(hass: HomeAssistant) -> None:
     """Create the charging-stations dashboard if it doesn't exist yet (idempotent)."""
     lovelace_data = hass.data.get(LOVELACE_DATA)
@@ -205,7 +234,7 @@ async def async_add_location_card(hass: HomeAssistant, entry: ConfigEntry, card:
     if existing_index is None:
         cards.append(card)
     else:
-        cards[existing_index] = card
+        cards[existing_index] = _merge_preserving_user_edits(cards[existing_index], card)
 
     await storage.async_save(config)
     if new_entity and card_map.get(entry.entry_id) != new_entity:
