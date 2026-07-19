@@ -99,7 +99,7 @@ async def async_setup_entry(
                         {
                             "type": "attribute",
                             "entity": status_sensor.entity_id,
-                            "attribute": "opening_hours",
+                            "attribute": "opening_hours_text",
                             "name": t("opening_hours_row_name", hass),
                             "icon": "mdi:clock-outline",
                         },
@@ -209,7 +209,7 @@ def _build_location_card_entities(
         {
             "type": "attribute",
             "entity": summary_sensor.entity_id,
-            "attribute": "opening_hours",
+            "attribute": "opening_hours_text",
             "name": t("opening_hours_row_name", hass),
             "icon": "mdi:clock-outline",
         },
@@ -325,6 +325,8 @@ class FavoriteStationSensor(CoordinatorEntity[FavoriteStationCoordinator], Senso
             "postal_code": station.get("postal_code"),
             "open_24h": station.get("open_24h"),
             "opening_hours": _opening_hours_display(station, self._hass_ref),
+            "opening_hours_text": _opening_hours_display(station, self._hass_ref)
+            or t("opening_unknown", self._hass_ref),
             "closed_all_day_today": is_closed_all_day_today(station),
             "payment_options": station.get("payment_options"),
             "last_update": station.get("last_update"),
@@ -488,7 +490,12 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
             "city": location.get("city"),
             "postal_code": location.get("postal_code"),
             "open_24h": location.get("open_24h"),
+            # opening_hours stays None without schedule data (the card omits
+            # the line then); opening_hours_text falls back to a localized
+            # "Unknown" for the dashboard row, which can't express a fallback.
             "opening_hours": _opening_hours_display(location, self._hass_ref),
+            "opening_hours_text": _opening_hours_display(location, self._hass_ref)
+            or t("opening_unknown", self._hass_ref),
             # True on full-day closures (e.g. Sundays) — the card badge says
             # "closed today" instead of just "closed" then.
             "closed_all_day_today": is_closed_all_day_today(location),

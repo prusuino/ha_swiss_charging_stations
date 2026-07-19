@@ -254,6 +254,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Horaires d'ouverture",
         "it": "Orari di apertura",
     },
+    "opening_unknown": {
+        "de": "Unbekannt",
+        "en": "Unknown",
+        "fr": "Inconnu",
+        "it": "Sconosciuto",
+    },
 }
 
 # Maps the raw EvseStatus values from the ich-tanke-strom.ch API to a
