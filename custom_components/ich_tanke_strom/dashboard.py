@@ -35,6 +35,16 @@ _LOGGER = logging.getLogger(__name__)
 DASHBOARD_URL_PATH = "ladestationen"
 DASHBOARD_ICON = "mdi:ev-station"
 FAVORITES_VIEW_PATH = "favoriten"
+# Default titles used before v1.7.1 (no country suffix). An existing
+# auto-created dashboard still carrying exactly one of these is renamed to
+# the current country-suffixed title on startup; any other title means the
+# user customized it and it is left alone.
+_LEGACY_DASHBOARD_TITLES = {
+    "Ladestationen",
+    "Charging Stations",
+    "Bornes de recharge",
+    "Stazioni di ricarica",
+}
 # Legacy marker key (pre-1.6.5): a foreign key inside the card dict made
 # Home Assistant's visual editor refuse the card ("editor not supported").
 # Still recognized for migration; new cards are identified via the entity
@@ -109,6 +119,7 @@ async def async_ensure_dashboard(hass: HomeAssistant) -> None:
         # before the marker existed. Preserve the rest of the store (cards map).
         if not (marker and marker.get("created")):
             await store.async_save({**(marker or {}), "created": True})
+        await _async_migrate_dashboard_title(hass)
         return
 
     if marker and marker.get("created"):
@@ -179,6 +190,43 @@ async def async_ensure_dashboard(hass: HomeAssistant) -> None:
 
     await store.async_save({**(marker or {}), "created": True})
     _LOGGER.info("Charging stations dashboard set up automatically at /%s", DASHBOARD_URL_PATH)
+
+
+async def _async_migrate_dashboard_title(hass: HomeAssistant) -> None:
+    """Rename an auto-created dashboard from a pre-1.7.1 default title
+    ("Ladestationen") to the current country-suffixed one ("Ladestationen
+    CH"). Only titles that still exactly match an old default are touched —
+    a user-customized title never matches and stays untouched. Idempotent:
+    once renamed, the title no longer matches the legacy set."""
+    new_title = t("dashboard_title", hass)
+    try:
+        collection = ll_dashboard.DashboardsCollection(hass)
+        await collection.async_load()
+        for item in collection.async_items():
+            if item.get(CONF_URL_PATH) != DASHBOARD_URL_PATH:
+                continue
+            title = item.get(CONF_TITLE)
+            if title == new_title or title not in _LEGACY_DASHBOARD_TITLES:
+                return
+            await collection.async_update_item(item["id"], {CONF_TITLE: new_title})
+            # Our collection instance shares the persistent store with the
+            # lovelace component but not its panel wiring — refresh the
+            # sidebar entry explicitly so the new name shows without restart.
+            frontend.async_register_built_in_panel(
+                hass,
+                LOVELACE_DOMAIN,
+                frontend_url_path=DASHBOARD_URL_PATH,
+                require_admin=item.get(CONF_REQUIRE_ADMIN, False),
+                show_in_sidebar=item.get(CONF_SHOW_IN_SIDEBAR, True),
+                sidebar_title=new_title,
+                sidebar_icon=item.get(CONF_ICON) or DASHBOARD_ICON,
+                config={"mode": "storage"},
+                update=True,
+            )
+            _LOGGER.info("Renamed the charging stations dashboard to '%s'", new_title)
+            return
+    except Exception:  # noqa: BLE001 - a rename must never break integration setup
+        _LOGGER.exception("Could not migrate the charging stations dashboard title")
 
 
 async def async_add_location_card(hass: HomeAssistant, entry: ConfigEntry, card: dict) -> None:

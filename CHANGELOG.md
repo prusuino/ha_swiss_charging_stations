@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.1 — 2026-07-19
+
+- Changed: the auto-created dashboard is now titled **"Ladestationen CH"** / "Charging Stations CH" (localized) instead of the unsuffixed name, so it stays distinguishable next to sibling integrations for other countries. Existing installations are migrated automatically on the next restart — but only if the dashboard still carries the exact old default title; a title you customized yourself is never touched.
+
 ## 1.7.0 — 2026-07-19
 
 - New: **per-plug-type availability sensors for favorite sites** — every plug type present at a site automatically gets its own sensor counting the currently available charge points of that type (e.g. `sensor.charging_station_favorite_location_<name>_available_ccs2` / `..._available_chademo`), matching the bundled card's visible-plug-types filter. The auto-generated dashboard card lists them as rows below the overall count — also for single-type sites, where naming the plug type makes the card easier to read. The site overview sensor additionally exposes the counts as an `available_by_plug_type` dictionary attribute.

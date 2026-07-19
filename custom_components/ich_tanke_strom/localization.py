@@ -75,10 +75,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "it": "Stazioni di ricarica libere {plug}",
     },
     "dashboard_title": {
-        "de": "Ladestationen",
-        "en": "Charging Stations",
-        "fr": "Bornes de recharge",
-        "it": "Stazioni di ricarica",
+        "de": "Ladestationen CH",
+        "en": "Charging Stations CH",
+        "fr": "Bornes de recharge CH",
+        "it": "Stazioni di ricarica CH",
     },
     "map_card_title": {
         "de": "Ladestationen Schweiz",
