@@ -127,6 +127,7 @@ async def async_setup_entry(
         async_add_entities([summary_sensor, status_sensor])
 
         known_connectors: dict[str, list] = {}
+        known_plug_sensors: dict[str, FavoriteLocationPlugAvailableSensor] = {}
         dashboard_card_added = False
 
         @callback
@@ -167,6 +168,23 @@ async def async_setup_entry(
                 for entity in known_connectors.pop(evse_id):
                     hass.async_create_task(entity.async_remove(force_remove=True))
 
+            # One available-count sensor per plug type present at the site
+            # (e.g. free CCS vs free CHAdeMO at a mixed site) — created and
+            # removed automatically as the site's connector mix changes.
+            plug_types = sorted({p for c in connectors.values() for p in (c.get("plugs") or [])})
+            new_plug_types = [p for p in plug_types if p not in known_plug_sensors]
+            if new_plug_types:
+                plug_entities = []
+                for plug_type in new_plug_types:
+                    sensor = FavoriteLocationPlugAvailableSensor(
+                        hass, location_coordinator, entry, plug_type, site_slug
+                    )
+                    known_plug_sensors[plug_type] = sensor
+                    plug_entities.append(sensor)
+                async_add_entities(plug_entities)
+            for plug_type in [p for p in known_plug_sensors if p not in plug_types]:
+                hass.async_create_task(known_plug_sensors.pop(plug_type).async_remove(force_remove=True))
+
             if not dashboard_card_added and known_connectors:
                 dashboard_card_added = True
                 card = {
@@ -180,7 +198,7 @@ async def async_setup_entry(
                         {
                             "type": "entities",
                             "entities": _build_location_card_entities(
-                                hass, known_connectors, summary_sensor, status_sensor
+                                hass, known_connectors, known_plug_sensors, summary_sensor, status_sensor
                             ),
                         },
                     ],
@@ -244,7 +262,11 @@ async def _async_add_dashboard_card(hass: HomeAssistant, entry: ConfigEntry, tit
 
 
 def _build_location_card_entities(
-    hass: HomeAssistant, known_connectors: dict[str, list], summary_sensor, status_sensor
+    hass: HomeAssistant,
+    known_connectors: dict[str, list],
+    known_plug_sensors: dict[str, "FavoriteLocationPlugAvailableSensor"],
+    summary_sensor,
+    status_sensor,
 ) -> list[dict]:
     entities = [
         {"entity": summary_sensor.entity_id, "name": t("favorite_location_available_name", hass)},
@@ -257,6 +279,21 @@ def _build_location_card_entities(
             "icon": "mdi:clock-outline",
         },
     ]
+    # Per-plug-type available counts — only worth a row when the site
+    # actually mixes plug types; with a single type the row would just
+    # repeat the overall count above.
+    if len(known_plug_sensors) > 1:
+        for plug_type in sorted(known_plug_sensors):
+            entities.append(
+                {
+                    "entity": known_plug_sensors[plug_type].entity_id,
+                    "name": t(
+                        "favorite_location_available_plug_name",
+                        hass,
+                        plug=PLUG_TYPE_SHORT_LABELS.get(plug_type, plug_type),
+                    ),
+                }
+            )
     for index, evse_id in enumerate(sorted(known_connectors), start=1):
         status_entity, power_entity, plug_entity, operator_entity, id_entity = known_connectors[evse_id]
         entities.append({"type": "section", "label": t("favorite_location_connector_prefix", hass, n=index)})
@@ -565,8 +602,16 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
             for evse_id, c in sorted(location.get("connectors", {}).items())
         ]
         status = site_status(location)
+        raw_connectors = list(location.get("connectors", {}).values())
+        available_by_plug_type = {
+            plug_type: sum(
+                1 for c in raw_connectors if c.get("status") == "Available" and plug_type in (c.get("plugs") or [])
+            )
+            for plug_type in sorted({p for c in raw_connectors for p in (c.get("plugs") or [])})
+        }
         return {
             "count_total": location.get("count_total", 0),
+            "available_by_plug_type": available_by_plug_type,
             # Derived overall site status — "closed" distinguishes a non-24h
             # site outside opening hours from a genuinely broken 24h site.
             "site_status": status,
@@ -632,6 +677,48 @@ class FavoriteLocationStatusSensor(CoordinatorEntity[FavoriteLocationCoordinator
     def extra_state_attributes(self):
         # Raw key for automations — the state itself is localized.
         return {"site_status": self._status()}
+
+
+class FavoriteLocationPlugAvailableSensor(CoordinatorEntity[FavoriteLocationCoordinator], SensorEntity):
+    """Number of currently available charge points at a favorite site that
+    offer one specific plug type — e.g. free CCS vs free CHAdeMO at a mixed
+    site, matching the bundled card's visible-plug-types filter. Created
+    automatically, one per plug type present at the site."""
+
+    _attr_has_entity_name = False
+    _attr_attribution = ATTRIBUTION
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:ev-plug-ccs2"
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        coordinator: FavoriteLocationCoordinator,
+        entry: ConfigEntry,
+        plug_type: str,
+        site_slug: str,
+    ) -> None:
+        super().__init__(coordinator)
+        self._plug_type = plug_type
+        label = PLUG_TYPE_SHORT_LABELS.get(plug_type, plug_type)
+        slug = PLUG_TYPE_SLUGS.get(plug_type) or slugify(plug_type)
+        self._attr_name = t("favorite_location_available_plug_name", hass, plug=label)
+        self._attr_unique_id = f"{entry.entry_id}_available_{slug}"
+        self._attr_device_info = device_info(hass, entry)
+        self.entity_id = f"sensor.charging_station_favorite_location_{site_slug}_available_{slug}"
+
+    @property
+    def native_value(self):
+        connectors = (self.coordinator.data or {}).get("connectors", {})
+        return sum(
+            1
+            for c in connectors.values()
+            if c.get("status") == "Available" and self._plug_type in (c.get("plugs") or [])
+        )
+
+    @property
+    def extra_state_attributes(self):
+        return {"plug_type": self._plug_type}
 
 
 class FavoriteLocationConnectorStatusSensor(CoordinatorEntity[FavoriteLocationCoordinator], SensorEntity):

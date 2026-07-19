@@ -49,7 +49,8 @@ A pre-filled card listing all five is also added automatically to a "Favorites" 
 
 | Entity | Type | Description |
 |---|---|---|
-| `sensor.charging_station_favorite_location_<name>` | Sensor | State = number of currently available charge points at the site. Attributes: total charge point count, derived site status, address, and a `connectors` list with each charge point's own status, power (kW), and plug type. |
+| `sensor.charging_station_favorite_location_<name>` | Sensor | State = number of currently available charge points at the site. Attributes: total charge point count, `available_by_plug_type` (available count per plug type as a dictionary), derived site status, address, and a `connectors` list with each charge point's own status, power (kW), and plug type. |
+| `sensor.charging_station_favorite_location_<name>_available_<plug>` | Sensor | One per plug type present at the site (e.g. `..._available_ccs2`, `..._available_chademo`): number of currently available charge points offering that plug type — free CCS vs free CHAdeMO at a mixed site. Created automatically. |
 | `sensor.charging_station_favorite_location_<name>_status` | Sensor | Derived overall site status: available / occupied / **closed** (every connector out of service at a non-24h site — i.e. outside opening hours) / out of service (same, but at a 24h site). Localized state; raw `site_status` attribute for automations. |
 | `sensor.charging_station_favorite_location_<name>_connector_<n>_status` | Sensor | Current status of connector `<n>` at the site (available / occupied / out of service). |
 | `sensor.charging_station_favorite_location_<name>_connector_<n>_power_kw` | Sensor | Charging power (kW) of connector `<n>`. |

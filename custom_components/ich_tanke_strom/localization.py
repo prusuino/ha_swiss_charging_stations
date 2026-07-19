@@ -212,6 +212,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Points de charge disponibles",
         "it": "Punti di ricarica disponibili",
     },
+    "favorite_location_available_plug_name": {
+        "de": "Freie Ladepunkte {plug}",
+        "en": "Available Charge Points {plug}",
+        "fr": "Points de charge disponibles {plug}",
+        "it": "Punti di ricarica disponibili {plug}",
+    },
     "favorite_location_connector_prefix": {
         "de": "Ladepunkt {n}",
         "en": "Charge Point {n}",
