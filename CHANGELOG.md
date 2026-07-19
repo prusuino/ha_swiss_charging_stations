@@ -1,8 +1,8 @@
 # Changelog
 
-## 1.7.3 — 2026-07-19
+## 1.7.5 — 2026-07-19
 
-- New: the card's header badges now stack vertically at a uniform size: availability, accessibility, renewable energy.
+- New: the card's header badges now stack vertically at a uniform size: availability, accessibility, renewable energy. A new **hide badges** multi-select in the visual editor (`hidden_badges` in YAML) hides individual ones.
 - New: the source's **Accessibility** declaration is read and shown as a badge — "Publicly accessible" (neutral), "Restricted access" (amber), "Paid access" (gray-blue), localized; also exposed as `accessibility` (raw) and `accessibility_text` attributes on the favorite status and site overview sensors.
 - New: the source's **RenewableEnergy** declaration is now read and exposed — as a `renewable_energy` attribute on the favorite status sensor, per connector in the site overview's `connectors` attribute (`renewable`), and as a dark-green leaf badge in the bundled card's header next to the availability badge (for a whole site only when no connector explicitly reports otherwise).
 
