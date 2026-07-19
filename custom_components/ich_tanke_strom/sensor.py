@@ -8,6 +8,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, Sen
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfPower
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
@@ -18,6 +19,7 @@ from .const import (
     CONF_MIN_POWER_KW,
     CONF_OPERATOR,
     CONF_PLUG_TYPE,
+    CONF_PLUG_TYPE_SENSORS,
     CONF_RADIUS_KM,
     CONF_STATION_ID,
     CONF_STATION_LOCATION_ID,
@@ -27,6 +29,8 @@ from .const import (
     ENTRY_TYPE_FAVORITE,
     ENTRY_TYPE_FAVORITE_LOCATION,
     FILTER_ALL,
+    PLUG_TYPE_SHORT_LABELS,
+    PLUG_TYPE_SLUGS,
 )
 from .coordinator import (
     FavoriteLocationCoordinator,
@@ -190,6 +194,45 @@ async def async_setup_entry(
     coordinator: IchTankeStromCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([ChargingStationsFreeSensor(hass, coordinator, entry)])
 
+    # Dedicated per-plug-type available-count sensors, chosen in the
+    # integration's Configure dialog. Synced live: selecting a type adds its
+    # sensor, deselecting removes it — no reload needed (the entry's update
+    # listener in __init__ only refreshes the coordinator, it never reloads).
+    known_plug_sensors: dict[str, ChargingStationsPlugTypeFreeSensor] = {}
+
+    @callback
+    def _sync_plug_type_sensors() -> None:
+        selected = entry.options.get(CONF_PLUG_TYPE_SENSORS) or []
+
+        new_entities = []
+        for plug_type in selected:
+            if plug_type not in known_plug_sensors:
+                sensor = ChargingStationsPlugTypeFreeSensor(hass, coordinator, entry, plug_type)
+                known_plug_sensors[plug_type] = sensor
+                new_entities.append(sensor)
+        if new_entities:
+            async_add_entities(new_entities)
+
+        registry = er.async_get(hass)
+        for plug_type in [p for p in known_plug_sensors if p not in selected]:
+            sensor = known_plug_sensors.pop(plug_type)
+            entity_id = sensor.entity_id
+
+            async def _remove(sensor=sensor, entity_id=entity_id) -> None:
+                await sensor.async_remove(force_remove=True)
+                # Drop the registry entry too, otherwise the deselected
+                # sensor lingers as a dead "no longer provided" entity.
+                if registry.async_get(entity_id):
+                    registry.async_remove(entity_id)
+
+            hass.async_create_task(_remove())
+
+    async def _options_updated(hass: HomeAssistant, updated_entry: ConfigEntry) -> None:
+        _sync_plug_type_sensors()
+
+    entry.async_on_unload(entry.add_update_listener(_options_updated))
+    _sync_plug_type_sensors()
+
 
 async def _async_add_dashboard_card(hass: HomeAssistant, entry: ConfigEntry, title: str, card: dict) -> None:
     """Add/refresh one favorite's card on the favorites dashboard. Best-effort
@@ -261,7 +304,45 @@ class ChargingStationsFreeSensor(CoordinatorEntity[IchTankeStromCoordinator], Se
             "filter_operator": options.get(CONF_OPERATOR, FILTER_ALL),
             "available_plug_types": data.get("plug_types", []),
             "available_operators": data.get("operators", []),
+            # Available count per plug type — independent of the plug-type
+            # and status filters (see coordinator), for templates without a
+            # dedicated per-plug-type sensor.
+            "available_by_plug_type": data.get("available_by_plug_type", {}),
         }
+
+
+class ChargingStationsPlugTypeFreeSensor(CoordinatorEntity[IchTankeStromCoordinator], SensorEntity):
+    """Number of available charging stations within the radius that offer one
+    specific plug type. Respects the minimum-power and operator filters but
+    ignores the live plug-type and status filters — the map can be filtered
+    to Type 2 without the CCS sensor dropping to 0. Created per plug type
+    selected in the integration's Configure dialog."""
+
+    _attr_has_entity_name = False
+    _attr_attribution = ATTRIBUTION
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:ev-plug-ccs2"
+
+    def __init__(
+        self, hass: HomeAssistant, coordinator: IchTankeStromCoordinator, entry: ConfigEntry, plug_type: str
+    ) -> None:
+        super().__init__(coordinator)
+        self._plug_type = plug_type
+        label = PLUG_TYPE_SHORT_LABELS.get(plug_type, plug_type)
+        slug = PLUG_TYPE_SLUGS.get(plug_type) or slugify(plug_type)
+        self._attr_name = t("sensor_free_plug_name", hass, plug=label)
+        self._attr_unique_id = f"{entry.entry_id}_free_{slug}"
+        self._attr_device_info = device_info(hass, entry)
+        radius = entry.data.get(CONF_RADIUS_KM)
+        self.entity_id = f"sensor.charging_stations_available_{round(radius)}km_{slug}"
+
+    @property
+    def native_value(self):
+        return ((self.coordinator.data or {}).get("available_by_plug_type") or {}).get(self._plug_type, 0)
+
+    @property
+    def extra_state_attributes(self):
+        return {"plug_type": self._plug_type}
 
 
 def _favorite_name(entry: ConfigEntry, station: dict) -> str:

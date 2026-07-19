@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.0 — 2026-07-19
+
+- New: **per-plug-type availability sensors** for radius entries — the integration's Configure dialog now has a multi-select of plug types, and each selected type gets its own sensor counting the available charge points of that type within the radius (e.g. `sensor.charging_stations_available_15km_ccs2`). These sensors respect the minimum-power and operator filters but deliberately ignore the live plug-type and status filters, so filtering the map to Type 2 no longer makes your "free CCS" count drop to 0. Selecting/deselecting types adds/removes the sensors live, no restart needed.
+- New: the radius availability sensor has an `available_by_plug_type` attribute — the same per-type counts as a dictionary, for templates without a dedicated sensor.
+
 ## 1.6.5 — 2026-07-19
 
 - Fixed: the card's tile order now matches the "Charge Point 1/2/3" sections of the entities card — the tiles followed the API's response order while the sections are numbered by sorted charge-point ID, so tile #1 could describe a different connector than "Charge Point 1" right below it.

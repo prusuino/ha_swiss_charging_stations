@@ -62,5 +62,19 @@
       "no_stations_found": "Aucune borne trouvée dans ce rayon.",
       "no_evse_id": "Cette borne n'a pas d'EvseID et ne peut pas être suivie comme favorite."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Capteurs par type de connecteur",
+        "description": "Chaque type de connecteur sélectionné reçoit son propre capteur comptant les points de charge disponibles de ce type dans ce rayon. Ces capteurs respectent les filtres puissance minimale et exploitant, mais ignorent les filtres en direct type de connecteur et statut — ils gardent leur signification pendant que la carte est filtrée.",
+        "data": {
+          "plug_type_sensors": "Types de connecteur avec capteur dédié"
+        }
+      }
+    },
+    "abort": {
+      "no_options": "Seules les entrées par rayon ont des options. Les favoris sont configurés lors de leur ajout."
+    }
   }
 }

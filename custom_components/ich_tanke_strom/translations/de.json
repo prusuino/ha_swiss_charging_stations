@@ -62,5 +62,19 @@
       "no_stations_found": "Keine Stationen in diesem Umkreis gefunden.",
       "no_evse_id": "Diese Station hat keine EvseID und kann nicht als Favorit verfolgt werden."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sensoren pro Steckertyp",
+        "description": "Jeder ausgewählte Steckertyp erhält einen eigenen Sensor, der die freien Ladepunkte dieses Typs in diesem Umkreis zählt. Diese Sensoren berücksichtigen die Filter Mindestleistung und Betreiber, ignorieren aber die Live-Filter Steckertyp und Status — sie behalten ihre Bedeutung, während die Karte gefiltert wird.",
+        "data": {
+          "plug_type_sensors": "Steckertypen mit eigenem Sensor"
+        }
+      }
+    },
+    "abort": {
+      "no_options": "Nur Umkreis-Einträge haben Optionen. Favoriten werden beim Hinzufügen konfiguriert."
+    }
   }
 }

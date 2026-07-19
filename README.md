@@ -20,13 +20,16 @@ ich-tanke-strom.ch operates a public WFS/GeoServer API covering roughly **19,000
 | Entity | Type | Description |
 |---|---|---|
 | `geo_location.ladestation_...` | Geo-location | One per matching charging **site** (connectors at the same location are grouped, so multi-charger sites don't stack indistinguishable markers). State = distance from your configured location (km). The map label shows availability — "6/7 available" for multi-connector sites, the plain status for single chargers — refreshed live on every update. Attributes: available/total count, max power (kW), plug types, operator, address, opening hours. |
-| `sensor.charging_stations_available_<radius>km` | Sensor | Count of currently available stations matching the active filters within the radius. Attributes include totals, active filter values, and the plug types/operators found in range. |
+| `sensor.charging_stations_available_<radius>km` | Sensor | Count of currently available stations matching the active filters within the radius. Attributes include totals, active filter values, the plug types/operators found in range, and `available_by_plug_type` — the available count per plug type as a dictionary. |
+| `sensor.charging_stations_available_<radius>km_<plug>` | Sensor | Optional, one per plug type selected in the integration's **Configure** dialog (e.g. `..._ccs2`, `..._type2_cable`): count of available charge points offering that plug type. Respects the minimum-power and operator filters but ignores the live plug-type/status filters — filtering the map to Type 2 doesn't zero your "free CCS" count. |
 | `number.charging_stations_min_power_kw` | Number | Minimum power filter (kW) — e.g. set to 50 to only show fast chargers. Takes effect immediately. |
 | `select.charging_stations_plug_type` | Select | Plug type filter, options discovered dynamically from stations in range (e.g. CCS, Type 2, CHAdeMO). |
 | `select.charging_stations_status` | Select | Availability filter: all / available only / occupied only. |
 | `select.charging_stations_operator` | Select | Operator filter, options discovered dynamically from stations in range. |
 
 Filter changes via the `number`/`select` entities apply immediately — no waiting for the next poll. Data is refreshed every 5 minutes.
+
+The per-plug-type sensors are enabled in the integration's **Configure** dialog (Settings → Devices & services → Swiss Charging Stations → Configure): a multi-select of the plug types found in the Swiss network. Selecting or deselecting a type adds or removes its sensor immediately, no restart needed.
 
 The radius is capped at **30 km**: larger areas make the source server slow (20–40+ seconds per fetch) and would flood Home Assistant with thousands of entities. Independently of the radius, at most the **500 nearest sites** get a map marker — the availability count sensor always covers the full filtered set.
 

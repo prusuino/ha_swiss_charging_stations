@@ -34,6 +34,7 @@ from .const import (
     FETCH_TIMEOUT_SECONDS,
     FILTER_ALL,
     KM_PER_DEGREE,
+    KNOWN_PLUG_TYPES,
     STATUS_AVAILABLE,
     STATUS_OCCUPIED,
     UPDATE_INTERVAL_MINUTES,
@@ -516,6 +517,25 @@ class IchTankeStromCoordinator(DataUpdateCoordinator[dict]):
         plug_types = sorted({p for s in all_stations.values() for p in s["plugs"]})
         operators = sorted({s["operator"] for s in all_stations.values() if s["operator"]})
 
+        # Available count per plug type. Respects the min-power and operator
+        # filters but deliberately ignores the plug-type and status filters —
+        # those only shape the map view, and a "free CCS" sensor must not
+        # drop to 0 just because the map is currently filtered to Type 2.
+        # A station listing several plug types counts once per type.
+        base = apply_filters(
+            all_stations,
+            options.get(CONF_MIN_POWER_KW, DEFAULT_MIN_POWER_KW),
+            FILTER_ALL,
+            FILTER_ALL,
+            options.get(CONF_OPERATOR, FILTER_ALL),
+        )
+        available_by_plug_type = {p: 0 for p in KNOWN_PLUG_TYPES}
+        for s in base.values():
+            if s["status"] != "Available":
+                continue
+            for p in s["plugs"]:
+                available_by_plug_type[p] = available_by_plug_type.get(p, 0) + 1
+
         return {
             "all_stations": all_stations,
             "filtered_stations": filtered,
@@ -524,6 +544,7 @@ class IchTankeStromCoordinator(DataUpdateCoordinator[dict]):
             "filtered_locations": group_by_location(filtered),
             "plug_types": plug_types,
             "operators": operators,
+            "available_by_plug_type": available_by_plug_type,
             "count_total": len(all_stations),
             "count_filtered": len(filtered),
             "count_available_filtered": sum(

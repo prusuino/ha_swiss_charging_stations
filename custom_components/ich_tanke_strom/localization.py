@@ -68,6 +68,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Bornes de recharge libres",
         "it": "Stazioni di ricarica libere",
     },
+    "sensor_free_plug_name": {
+        "de": "Ladestationen frei {plug}",
+        "en": "Charging Stations Free {plug}",
+        "fr": "Bornes de recharge libres {plug}",
+        "it": "Stazioni di ricarica libere {plug}",
+    },
     "dashboard_title": {
         "de": "Ladestationen",
         "en": "Charging Stations",

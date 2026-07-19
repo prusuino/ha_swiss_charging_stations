@@ -11,7 +11,8 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
     NumberSelector,
@@ -30,6 +31,7 @@ from .const import (
     CONF_LONGITUDE,
     CONF_MIN_POWER_KW,
     CONF_PLUG_TYPE,
+    CONF_PLUG_TYPE_SENSORS,
     CONF_RADIUS_KM,
     CONF_STATION_ID,
     CONF_STATION_LOCATION_EVSE_IDS,
@@ -76,6 +78,11 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
     """Setup wizard: pick radius overview or favorite mode, then configure it."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        return IchTankeStromOptionsFlow()
 
     def __init__(self) -> None:
         self._favorite_candidates: dict[str, dict] = {}
@@ -421,3 +428,41 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             title=t("favorite_location_device_name", self.hass, name=name),
             data=data,
         )
+
+
+class IchTankeStromOptionsFlow(OptionsFlow):
+    """Configure dialog. Radius entries only: pick which plug types get a
+    dedicated available-count sensor. The live filters (min power, plug type,
+    status, operator) intentionally stay on their number/select entities —
+    they are meant to be flipped from a dashboard, not buried in a dialog."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        if self.config_entry.data.get(CONF_ENTRY_TYPE, ENTRY_TYPE_RADIUS) != ENTRY_TYPE_RADIUS:
+            return self.async_abort(reason="no_options")
+
+        if user_input is not None:
+            # Merge instead of replace — entry.options also carries the live
+            # filter values written by the number/select entities.
+            return self.async_create_entry(
+                data={
+                    **self.config_entry.options,
+                    CONF_PLUG_TYPE_SENSORS: user_input.get(CONF_PLUG_TYPE_SENSORS, []),
+                }
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_PLUG_TYPE_SENSORS,
+                    default=list(self.config_entry.options.get(CONF_PLUG_TYPE_SENSORS) or []),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[SelectOptionDict(value=p, label=p) for p in KNOWN_PLUG_TYPES],
+                        multiple=True,
+                        mode=SelectSelectorMode.LIST,
+                        sort=False,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

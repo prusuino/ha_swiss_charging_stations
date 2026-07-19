@@ -62,5 +62,19 @@
       "no_stations_found": "No stations found within this radius.",
       "no_evse_id": "This station has no EvseID and can't be tracked as a favorite."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Per-plug-type sensors",
+        "description": "Each selected plug type gets its own sensor counting the available charge points of that type within this radius. These sensors respect the minimum-power and operator filters but ignore the live plug-type and status filters, so they keep their meaning while the map is being filtered.",
+        "data": {
+          "plug_type_sensors": "Plug types with a dedicated sensor"
+        }
+      }
+    },
+    "abort": {
+      "no_options": "Only radius entries have options. Favorites are configured when they are added."
+    }
   }
 }

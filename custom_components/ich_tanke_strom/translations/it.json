@@ -62,5 +62,19 @@
       "no_stations_found": "Nessuna stazione trovata in questo raggio.",
       "no_evse_id": "Questa stazione non ha un EvseID e non può essere monitorata come preferita."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sensori per tipo di connettore",
+        "description": "Ogni tipo di connettore selezionato riceve un proprio sensore che conta i punti di ricarica disponibili di quel tipo in questo raggio. Questi sensori rispettano i filtri potenza minima e gestore, ma ignorano i filtri live tipo di connettore e stato — mantengono il loro significato mentre la mappa viene filtrata.",
+        "data": {
+          "plug_type_sensors": "Tipi di connettore con sensore dedicato"
+        }
+      }
+    },
+    "abort": {
+      "no_options": "Solo le voci per raggio hanno opzioni. I preferiti vengono configurati al momento dell'aggiunta."
+    }
   }
 }

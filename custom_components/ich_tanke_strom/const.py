@@ -91,3 +91,37 @@ KNOWN_PLUG_TYPES = [
     "Type 2 Outlet",
     "Type J Swiss Standard",
 ]
+
+# Option (set via the integration's Configure dialog): plug types that get
+# their own dedicated available-count sensor on a radius entry. Stored as a
+# list of raw API plug type strings. These sensors ignore the live plug-type
+# and status filters (which only shape the map/count sensor), so their
+# meaning stays stable while the map is being filtered.
+CONF_PLUG_TYPE_SENSORS = "plug_type_sensors"
+
+# Compact entity_id suffix per plug type — the raw API strings are far too
+# long for entity ids ("CCS Combo 2 Plug (Cable Attached)").
+PLUG_TYPE_SLUGS = {
+    "CCS Combo 1 Plug (Cable Attached)": "ccs1",
+    "CCS Combo 2 Plug (Cable Attached)": "ccs2",
+    "CHAdeMO": "chademo",
+    "Tesla Connector": "tesla",
+    "Type 1 Connector (Cable Attached)": "type1",
+    "Type 2 Connector (Cable Attached)": "type2_cable",
+    "Type 2 Outlet": "type2_outlet",
+    "Type J Swiss Standard": "type_j",
+}
+
+# Short display label per plug type, used in sensor names. Language-neutral
+# on purpose — raw plug type strings are shown untranslated everywhere else
+# in this integration (select options, attributes) as documented in select.py.
+PLUG_TYPE_SHORT_LABELS = {
+    "CCS Combo 1 Plug (Cable Attached)": "CCS Combo 1",
+    "CCS Combo 2 Plug (Cable Attached)": "CCS Combo 2",
+    "CHAdeMO": "CHAdeMO",
+    "Tesla Connector": "Tesla",
+    "Type 1 Connector (Cable Attached)": "Type 1",
+    "Type 2 Connector (Cable Attached)": "Type 2 (Cable)",
+    "Type 2 Outlet": "Type 2 (Outlet)",
+    "Type J Swiss Standard": "Type J",
+}
