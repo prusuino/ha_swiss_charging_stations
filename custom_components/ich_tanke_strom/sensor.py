@@ -270,18 +270,11 @@ def _build_location_card_entities(
 ) -> list[dict]:
     entities = [
         {"entity": summary_sensor.entity_id, "name": t("favorite_location_available_name", hass)},
-        {"entity": status_sensor.entity_id, "name": t("favorite_status_name", hass)},
-        {
-            "type": "attribute",
-            "entity": summary_sensor.entity_id,
-            "attribute": "opening_hours_text",
-            "name": t("opening_hours_row_name", hass),
-            "icon": "mdi:clock-outline",
-        },
     ]
-    # Per-plug-type available counts — also shown for single-type sites,
-    # where the row nominally repeats the overall count: naming the plug
-    # type makes the card easier to understand at a glance (user request).
+    # Per-plug-type available counts, directly below the overall count they
+    # break down. Also shown for single-type sites, where the row nominally
+    # repeats the overall count: naming the plug type makes the card easier
+    # to understand at a glance (user request).
     for plug_type in sorted(known_plug_sensors):
         entities.append(
             {
@@ -293,6 +286,16 @@ def _build_location_card_entities(
                 ),
             }
         )
+    entities.append({"entity": status_sensor.entity_id, "name": t("favorite_status_name", hass)})
+    entities.append(
+        {
+            "type": "attribute",
+            "entity": summary_sensor.entity_id,
+            "attribute": "opening_hours_text",
+            "name": t("opening_hours_row_name", hass),
+            "icon": "mdi:clock-outline",
+        }
+    )
     for index, evse_id in enumerate(sorted(known_connectors), start=1):
         status_entity, power_entity, plug_entity, operator_entity, id_entity = known_connectors[evse_id]
         entities.append({"type": "section", "label": t("favorite_location_connector_prefix", hass, n=index)})
