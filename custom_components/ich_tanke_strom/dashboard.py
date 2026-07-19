@@ -23,6 +23,7 @@ from homeassistant.components.lovelace.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 import voluptuous as vol
 
@@ -211,6 +212,63 @@ async def async_add_location_card(hass: HomeAssistant, entry: ConfigEntry, card:
         card_map[entry.entry_id] = new_entity
         await store.async_save(data)
     _LOGGER.info("Synced favorites-dashboard card for entry %s", entry.entry_id)
+
+
+_CARD_TYPES = ("custom:swiss-charging-stations-card", "custom:ich-tanke-strom-card")
+
+
+async def async_remove_orphan_cards(hass: HomeAssistant) -> None:
+    """Remove favorite cards whose sensor no longer exists (once per start).
+
+    The per-delete cleanup hook (async_remove_entry -> remove_location_card)
+    runs exactly once at deletion time — if Lovelace isn't ready at that
+    moment (e.g. the favorite is deleted right after a restart), it silently
+    no-ops and the card lingers forever (user report, 2026-07-19). This
+    sweep catches such leftovers: any card in the Favorites view whose first
+    stacked card is ours but references an entity that is gone from both the
+    entity registry and the state machine gets dropped. Registry entries of
+    a deleted config entry are removed immediately, so a still-loading
+    favorite can't be mistaken for an orphan."""
+    lovelace_data = hass.data.get(LOVELACE_DATA)
+    if lovelace_data is None or DASHBOARD_URL_PATH not in lovelace_data.dashboards:
+        return
+
+    storage = lovelace_data.dashboards[DASHBOARD_URL_PATH]
+    try:
+        config = await storage.async_load(False)
+    except HomeAssistantError:
+        return
+
+    views = (config or {}).get("views", [])
+    favorites_view = next((v for v in views if v.get("path") == FAVORITES_VIEW_PATH), None)
+    if favorites_view is None:
+        return
+
+    registry = er.async_get(hass)
+
+    def _is_orphan(card: dict) -> bool:
+        inner = card.get("cards")
+        if not (isinstance(inner, list) and inner and isinstance(inner[0], dict)):
+            return False
+        if inner[0].get("type") not in _CARD_TYPES:
+            return False
+        entity = inner[0].get("entity")
+        if not isinstance(entity, str) or not entity:
+            return False
+        return registry.async_get(entity) is None and hass.states.get(entity) is None
+
+    cards = favorites_view.get("cards", [])
+    remaining = [c for c in cards if not (isinstance(c, dict) and _is_orphan(c))]
+    if len(remaining) == len(cards):
+        return
+
+    removed = len(cards) - len(remaining)
+    if remaining:
+        favorites_view["cards"] = remaining
+    else:
+        views.remove(favorites_view)
+    await storage.async_save(config)
+    _LOGGER.info("Removed %d orphaned favorites-dashboard card(s)", removed)
 
 
 async def async_remove_location_card(hass: HomeAssistant, entry_id: str) -> None:

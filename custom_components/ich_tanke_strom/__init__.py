@@ -4,13 +4,16 @@ from __future__ import annotations
 import logging
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
 from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_FAVORITE, ENTRY_TYPE_FAVORITE_LOCATION
 from .coordinator import FavoriteLocationCoordinator, FavoriteStationCoordinator, IchTankeStromCoordinator
-from .dashboard import async_ensure_dashboard, async_remove_location_card
+from .dashboard import async_ensure_dashboard, async_remove_location_card, async_remove_orphan_cards
 from .frontend import async_register_card
+
+_ORPHAN_SWEEP_SCHEDULED = f"{DOMAIN}_orphan_sweep_scheduled"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +31,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await async_register_card(hass, str(integration.version))
     except Exception:  # noqa: BLE001 - card registration must never block integration setup
         _LOGGER.exception("Automatic registration of the bundled Lovelace card failed")
+
+    if not hass.data.get(_ORPHAN_SWEEP_SCHEDULED):
+        # Once per start, after everything is loaded: drop favorite cards
+        # whose favorite no longer exists — the per-delete cleanup can miss
+        # if Lovelace wasn't ready at deletion time.
+        hass.data[_ORPHAN_SWEEP_SCHEDULED] = True
+
+        async def _sweep(_event) -> None:
+            try:
+                await async_remove_orphan_cards(hass)
+            except Exception:  # noqa: BLE001 - cleanup must never break startup
+                _LOGGER.exception("Orphaned favorites-dashboard card sweep failed")
+
+        if hass.is_running:
+            hass.async_create_task(_sweep(None))
+        else:
+            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _sweep)
 
     entry_type = entry.data.get(CONF_ENTRY_TYPE)
     if entry_type == ENTRY_TYPE_FAVORITE:
