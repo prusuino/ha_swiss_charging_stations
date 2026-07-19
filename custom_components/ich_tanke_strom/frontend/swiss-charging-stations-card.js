@@ -209,7 +209,7 @@ class SwissChargingStationsCard extends HTMLElement {
 
     let boxes;
     let badge = "";
-    let badgeAlert = false;
+    let badgeClass = "";
     if (isSite) {
       const total = attrs.count_total || attrs.connectors.length;
       const available = Number(stateObj.state) || 0;
@@ -223,10 +223,13 @@ class SwissChargingStationsCard extends HTMLElement {
           siteClosed && attrs.closed_all_day_today
             ? CLOSED_TODAY_WORDS[this._lang()] || CLOSED_TODAY_WORDS.en
             : siteWords[this._lang()] || siteWords.en;
-        badgeAlert = true;
+        badgeClass = siteClosed ? "closed" : "alert";
       } else {
+        // Availability badge mirrors the tile colors: green while something
+        // is still free, red when every connector is taken.
         const word = AVAILABLE_WORD[this._lang()] || AVAILABLE_WORD.en;
         badge = `${available}/${total} ${word}`;
+        badgeClass = available > 0 ? "ok" : "busy";
       }
       boxes = attrs.connectors.map((c, i) =>
         this._box(
@@ -275,6 +278,14 @@ class SwissChargingStationsCard extends HTMLElement {
           background: var(--info-color, #1565c0);
           color: #fff;
         }
+        .badge.ok {
+          background: var(--success-color, #2e7d32);
+          color: #fff;
+        }
+        .badge.busy {
+          background: var(--error-color, #c62828);
+          color: #fff;
+        }
         .addr {
           font-size: 0.85em; color: var(--secondary-text-color);
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -299,7 +310,7 @@ class SwissChargingStationsCard extends HTMLElement {
         <div class="wrap">
           <div class="head">
             <div class="title">${this._escape(title)}</div>
-            ${badge ? `<div class="badge${badgeAlert ? " alert" : ""}${siteClosed ? " closed" : ""}">${this._escape(badge)}</div>` : ""}
+            ${badge ? `<div class="badge${badgeClass ? ` ${badgeClass}` : ""}">${this._escape(badge)}</div>` : ""}
           </div>
           <div class="subhead">
             ${address ? `<div class="addr">${this._escape(address)}</div>` : ""}
