@@ -2,6 +2,7 @@
 
 ## 1.6.5 — 2026-07-19
 
+- Fixed: the card's tile order now matches the "Charge Point 1/2/3" sections of the entities card — the tiles followed the API's response order while the sections are numbered by sorted charge-point ID, so tile #1 could describe a different connector than "Charge Point 1" right below it.
 - Fixed: customizations made on an auto-generated favorite card (e.g. the new plug-type filter, or a changed title) no longer get wiped by the restart sync — the sync now only refreshes what the integration manages (the entity lists), keeping your edits on the graphic card.
 - Fixed: deleting a favorite could leave its auto-generated dashboard card behind when Lovelace wasn't ready at that exact moment (e.g. right after a restart) — the one-shot cleanup silently no-oped. A sweep on every start now removes leftover cards whose favorite no longer exists.
 - Fixed: the auto-generated favorite cards now support Home Assistant's **visual editor** — the internal marker key that identified each card for syncing/removal made the editor refuse the card ("visual editor not supported"). Cards are now identified through the integration's persistent store instead, keeping the card config clean; existing cards are migrated automatically on the next restart.

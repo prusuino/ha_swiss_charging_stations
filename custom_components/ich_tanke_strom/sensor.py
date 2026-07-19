@@ -476,7 +476,12 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
                 "plug_types": c.get("plugs"),
                 "power_kw": c.get("power_kw"),
             }
-            for evse_id, c in location.get("connectors", {}).items()
+            # Sorted by EvseID so the card's tile order/numbering matches the
+            # per-connector sensors ("Charge Point n"), which are numbered by
+            # sorted EvseID — the raw dict keeps API response order, which
+            # made tile #1 describe a different connector than "Charge Point
+            # 1" below it (user report, 2026-07-19).
+            for evse_id, c in sorted(location.get("connectors", {}).items())
         ]
         status = site_status(location)
         return {
