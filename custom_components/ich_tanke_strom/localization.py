@@ -266,6 +266,24 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Horaires d'ouverture",
         "it": "Orari di apertura",
     },
+    "accessibility_free": {
+        "de": "Frei zugänglich",
+        "en": "Publicly accessible",
+        "fr": "Accès libre",
+        "it": "Accesso libero",
+    },
+    "accessibility_restricted": {
+        "de": "Zugang eingeschränkt",
+        "en": "Restricted access",
+        "fr": "Accès restreint",
+        "it": "Accesso limitato",
+    },
+    "accessibility_paying": {
+        "de": "Zugang kostenpflichtig",
+        "en": "Paid access",
+        "fr": "Accès payant",
+        "it": "Accesso a pagamento",
+    },
     "opening_unknown": {
         "de": "Unbekannt",
         "en": "Unknown",
@@ -356,3 +374,18 @@ def location_display_label(location: dict, hass: HomeAssistant) -> str:
         count=location.get("count_total", 0),
         distance=location.get("distance_km"),
     )
+
+
+# Raw Accessibility API value -> localization key. The raw value stays in
+# the attributes for automations; this mapping is only for display.
+ACCESSIBILITY_KEY_MAP: dict[str, str] = {
+    "Free publicly accessible": "accessibility_free",
+    "Restricted access": "accessibility_restricted",
+    "Paying publicly accessible": "accessibility_paying",
+}
+
+
+def localized_accessibility(raw: str | None, hass: HomeAssistant) -> str | None:
+    """Display text for the Accessibility declaration; None when unknown."""
+    key = ACCESSIBILITY_KEY_MAP.get(raw or "")
+    return t(key, hass) if key else None

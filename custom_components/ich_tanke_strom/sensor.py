@@ -43,7 +43,7 @@ from .coordinator import (
 )
 from .dashboard import async_add_location_card
 from .device import device_info
-from .localization import localized_site_status, localized_status, t, weekday_short
+from .localization import localized_accessibility, localized_site_status, localized_status, t, weekday_short
 
 _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data: ich-tanke-strom.ch (BFE / EnergieSchweiz / swisstopo)"
@@ -450,8 +450,12 @@ class FavoriteStationSensor(CoordinatorEntity[FavoriteStationCoordinator], Senso
             "closed_all_day_today": is_closed_all_day_today(station),
             "payment_options": station.get("payment_options"),
             # Operator's declaration that this charge point is supplied with
-            # renewable energy — shown as a leaf on the bundled card.
+            # renewable energy — shown as a leaf badge on the bundled card.
             "renewable_energy": station.get("renewable_energy"),
+            # Access declaration (raw + localized) — the card shows the text
+            # as a badge and keys its color off the raw value.
+            "accessibility": station.get("accessibility"),
+            "accessibility_text": localized_accessibility(station.get("accessibility"), self._hass_ref),
             "last_update": station.get("last_update"),
             "latitude": station.get("latitude"),
             "longitude": station.get("longitude"),
@@ -609,6 +613,7 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
         ]
         status = site_status(location)
         raw_connectors = list(location.get("connectors", {}).values())
+        accessibility = next((c.get("accessibility") for c in raw_connectors if c.get("accessibility")), None)
         available_by_plug_type = {
             plug_type: sum(
                 1 for c in raw_connectors if c.get("status") == "Available" and plug_type in (c.get("plugs") or [])
@@ -618,6 +623,8 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
         return {
             "count_total": location.get("count_total", 0),
             "available_by_plug_type": available_by_plug_type,
+            "accessibility": accessibility,
+            "accessibility_text": localized_accessibility(accessibility, self._hass_ref),
             # Derived overall site status — "closed" distinguishes a non-24h
             # site outside opening hours from a genuinely broken 24h site.
             "site_status": status,
