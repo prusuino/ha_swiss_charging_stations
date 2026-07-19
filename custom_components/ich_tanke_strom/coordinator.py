@@ -381,6 +381,27 @@ def is_open_now(opening_times: list | None, now: datetime | None = None) -> bool
         return None
 
 
+def opening_periods_today(opening_times: list | None, now: datetime | None = None) -> list[str] | None:
+    """Today's opening periods as display strings ('07:30–20:00'), evaluated
+    in Europe/Zurich like is_open_now. Returns None when no schedule data is
+    present (e.g. 24h sites), [] when the site is closed all day today."""
+    if not opening_times:
+        return None
+    try:
+        now = now or datetime.now(ZoneInfo("Europe/Zurich"))
+        weekday = now.strftime("%A")
+        periods: list[str] = []
+        for entry in opening_times:
+            if not isinstance(entry, dict) or entry.get("on") != weekday:
+                continue
+            for period in _as_list(entry.get("Period")):
+                if isinstance(period, dict) and period.get("begin") and period.get("end"):
+                    periods.append(f"{period['begin']}–{period['end']}")
+        return sorted(periods)
+    except Exception:  # noqa: BLE001 - malformed schedule data must never break a refresh
+        return None
+
+
 def site_status(location: dict) -> str:
     """Derived overall status of a whole site. Returns one of:
     available / occupied / closed / out_of_service / unknown.

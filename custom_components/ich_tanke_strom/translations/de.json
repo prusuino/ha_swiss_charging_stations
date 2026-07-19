@@ -44,6 +44,13 @@
           "favorite_scope": "Umfang",
           "favorite_name": "Eigener Name (optional)"
         }
+      },
+      "favorite_confirm": {
+        "title": "Favorit bestätigen",
+        "description": "Gefunden: {what}. Du kannst vor dem Anlegen einen eigenen Namen vergeben.",
+        "data": {
+          "favorite_name": "Eigener Name (optional)"
+        }
       }
     },
     "abort": {

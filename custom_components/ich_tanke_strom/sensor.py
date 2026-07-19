@@ -33,6 +33,7 @@ from .coordinator import (
     FavoriteStationCoordinator,
     IchTankeStromCoordinator,
     icon_for_status,
+    opening_periods_today,
     site_status,
 )
 from .dashboard import async_add_location_card
@@ -41,6 +42,21 @@ from .localization import localized_site_status, localized_status, t
 
 _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data: ich-tanke-strom.ch (BFE / EnergieSchweiz / swisstopo)"
+
+
+def _opening_hours_display(data: dict, hass) -> str | None:
+    """Localized one-line opening-hours text for today ('Heute 07:30–20:00',
+    'Heute geschlossen', '24 h geöffnet') — None when the source has no
+    schedule data for this site. Rendered by the bundled card below the
+    address."""
+    if data.get("open_24h"):
+        return t("opening_24h", hass)
+    periods = opening_periods_today(data.get("opening_times"))
+    if periods is None:
+        return None
+    if not periods:
+        return t("opening_today_closed", hass)
+    return t("opening_today", hass, periods=", ".join(periods))
 
 
 async def async_setup_entry(
@@ -66,6 +82,13 @@ async def async_setup_entry(
                     "type": "entities",
                     "entities": [
                         {"entity": status_sensor.entity_id, "name": t("favorite_status_name", hass)},
+                        {
+                            "type": "attribute",
+                            "entity": status_sensor.entity_id,
+                            "attribute": "opening_hours_today",
+                            "name": t("opening_hours_row_name", hass),
+                            "icon": "mdi:clock-outline",
+                        },
                         {"entity": power_sensor.entity_id, "name": t("favorite_power_name", hass)},
                         {"entity": plug_sensor.entity_id, "name": t("favorite_plug_type_name", hass)},
                         {"entity": operator_sensor.entity_id, "name": t("favorite_operator_name", hass)},
@@ -169,6 +192,13 @@ def _build_location_card_entities(
     entities = [
         {"entity": summary_sensor.entity_id, "name": t("favorite_location_available_name", hass)},
         {"entity": status_sensor.entity_id, "name": t("favorite_status_name", hass)},
+        {
+            "type": "attribute",
+            "entity": summary_sensor.entity_id,
+            "attribute": "opening_hours_today",
+            "name": t("opening_hours_row_name", hass),
+            "icon": "mdi:clock-outline",
+        },
     ]
     for index, evse_id in enumerate(sorted(known_connectors), start=1):
         status_entity, power_entity, plug_entity, operator_entity, id_entity = known_connectors[evse_id]
@@ -270,6 +300,7 @@ class FavoriteStationSensor(CoordinatorEntity[FavoriteStationCoordinator], Senso
             "city": station.get("city"),
             "postal_code": station.get("postal_code"),
             "open_24h": station.get("open_24h"),
+            "opening_hours_today": _opening_hours_display(station, self._hass_ref),
             "payment_options": station.get("payment_options"),
             "last_update": station.get("last_update"),
             "latitude": station.get("latitude"),
@@ -432,6 +463,7 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
             "city": location.get("city"),
             "postal_code": location.get("postal_code"),
             "open_24h": location.get("open_24h"),
+            "opening_hours_today": _opening_hours_display(location, self._hass_ref),
             "latitude": location.get("latitude"),
             "longitude": location.get("longitude"),
             "connectors": connectors,

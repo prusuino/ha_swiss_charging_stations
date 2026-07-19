@@ -84,6 +84,11 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
         self._pending_station: dict | None = None
         self._pending_site: dict | None = None
         self._pending_name: str | None = None
+        # Carried between favorite -> favorite_confirm (ID path): exactly one
+        # of these is set — a single resolved connector, or a site id whose
+        # connectors sit in _favorite_candidates.
+        self._confirm_station: dict | None = None
+        self._confirm_location_id: str | None = None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if user_input is not None:
@@ -170,7 +175,10 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
                             self._pending_site = site
                             self._pending_name = user_input.get(CONF_FAVORITE_NAME)
                             return await self.async_step_favorite_scope()
-                        return await self._create_favorite_entry(station, user_input.get(CONF_FAVORITE_NAME))
+                        # Single-connector site: confirm + optional custom name.
+                        self._confirm_station = station
+                        self._confirm_location_id = None
+                        return await self.async_step_favorite_confirm()
                     if location_connectors:
                         # A ChargingStationId lookup can also under-count the
                         # site (Migros: one real id per pole at the same
@@ -186,9 +194,11 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
                             connectors = site["connectors"]
                             location_id = site["location_id"]
                         self._favorite_candidates = connectors
-                        return await self._create_favorite_location_entry(
-                            location_id, user_input.get(CONF_FAVORITE_NAME)
-                        )
+                        # Show what was resolved (site, connector count) and
+                        # offer a custom name before creating the entry.
+                        self._confirm_station = None
+                        self._confirm_location_id = location_id
+                        return await self.async_step_favorite_confirm()
                     errors[CONF_STATION_ID] = "station_not_found"
             else:
                 lat = user_input[CONF_LATITUDE]
@@ -273,6 +283,46 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
                 "count": str(count),
                 "evse_id": station.get("evse_id") or "",
             },
+        )
+
+    async def async_step_favorite_confirm(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Confirm an ID-resolved favorite before creating it — shows what
+        was found (single charge point, or a whole site with its connector
+        count) and offers an optional custom name, which the direct ID path
+        otherwise never gets to ask for."""
+        if self._confirm_station is None and self._confirm_location_id is None:
+            return await self.async_step_favorite()
+
+        if user_input is not None:
+            name = user_input.get(CONF_FAVORITE_NAME)
+            if self._confirm_station is not None:
+                return await self._create_favorite_entry(self._confirm_station, name)
+            return await self._create_favorite_location_entry(self._confirm_location_id, name)
+
+        if self._confirm_station is not None:
+            station = self._confirm_station
+            desc_parts = [p for p in [station.get("station_name"), station.get("city")] if p]
+            what = t(
+                "favorite_confirm_single",
+                self.hass,
+                evse_id=station.get("evse_id") or "?",
+                name=" · ".join(desc_parts),
+            )
+        else:
+            location = group_by_location(self._favorite_candidates).get(self._confirm_location_id) or {}
+            site_parts = [p for p in [location.get("station_name"), location.get("street"), location.get("city")] if p]
+            what = t(
+                "favorite_confirm_site",
+                self.hass,
+                name=" · ".join(site_parts) or self._confirm_location_id,
+                count=location.get("count_total") or len(self._favorite_candidates),
+            )
+
+        schema = vol.Schema({vol.Optional(CONF_FAVORITE_NAME, default=""): str})
+        return self.async_show_form(
+            step_id="favorite_confirm",
+            data_schema=schema,
+            description_placeholders={"what": what},
         )
 
     async def async_step_favorite_pick(self, user_input: dict[str, Any] | None = None) -> FlowResult:

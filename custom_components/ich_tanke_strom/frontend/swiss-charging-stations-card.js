@@ -185,6 +185,9 @@ class SwissChargingStationsCard extends HTMLElement {
       [attrs.postal_code, attrs.city].filter(Boolean).join(" "),
     ].filter(Boolean);
     const address = addressParts.join(", ");
+    // Localized server-built line ("Heute 07:30–20:00" / "24 h geöffnet"),
+    // absent when the source has no schedule data for this site.
+    const openingHours = attrs.opening_hours_today || "";
 
     let boxes;
     let badge = "";
@@ -246,9 +249,9 @@ class SwissChargingStationsCard extends HTMLElement {
         }
         .addr {
           font-size: 0.85em; color: var(--secondary-text-color);
-          margin-bottom: 12px;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
+        .subhead { margin-bottom: 12px; }
         .grid {
           display: grid; gap: 8px;
           grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
@@ -270,7 +273,10 @@ class SwissChargingStationsCard extends HTMLElement {
             <div class="title">${this._escape(title)}</div>
             ${badge ? `<div class="badge${badgeAlert ? " alert" : ""}">${this._escape(badge)}</div>` : ""}
           </div>
-          ${address ? `<div class="addr">${this._escape(address)}</div>` : ""}
+          <div class="subhead">
+            ${address ? `<div class="addr">${this._escape(address)}</div>` : ""}
+            ${openingHours ? `<div class="addr">${this._escape(openingHours)}</div>` : ""}
+          </div>
           <div class="grid">${boxes.join("")}</div>
         </div>
       </ha-card>`;

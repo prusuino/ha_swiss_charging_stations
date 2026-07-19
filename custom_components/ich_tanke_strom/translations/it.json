@@ -44,6 +44,13 @@
           "favorite_scope": "Ambito",
           "favorite_name": "Nome personalizzato (opzionale)"
         }
+      },
+      "favorite_confirm": {
+        "title": "Conferma preferito",
+        "description": "Trovato: {what}. Puoi assegnare un nome personalizzato prima di crearlo.",
+        "data": {
+          "favorite_name": "Nome personalizzato (opzionale)"
+        }
       }
     },
     "abort": {

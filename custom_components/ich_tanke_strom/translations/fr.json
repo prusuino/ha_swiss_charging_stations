@@ -44,6 +44,13 @@
           "favorite_scope": "Portée",
           "favorite_name": "Nom personnalisé (optionnel)"
         }
+      },
+      "favorite_confirm": {
+        "title": "Confirmer le favori",
+        "description": "Trouvé : {what}. Vous pouvez lui donner un nom personnalisé avant de le créer.",
+        "data": {
+          "favorite_name": "Nom personnalisé (optionnel)"
+        }
       }
     },
     "abort": {

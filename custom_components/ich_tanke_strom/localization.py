@@ -230,6 +230,42 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Ajouter uniquement ce point de charge aux favoris",
         "it": "Aggiungi solo questo punto di ricarica ai preferiti",
     },
+    "favorite_confirm_single": {
+        "de": "Ladepunkt {evse_id} ({name})",
+        "en": "Charge point {evse_id} ({name})",
+        "fr": "Point de charge {evse_id} ({name})",
+        "it": "Punto di ricarica {evse_id} ({name})",
+    },
+    "favorite_confirm_site": {
+        "de": "Standort {name} mit {count} Ladepunkten",
+        "en": "Site {name} with {count} charge points",
+        "fr": "Site {name} avec {count} points de charge",
+        "it": "Sito {name} con {count} punti di ricarica",
+    },
+    "opening_today": {
+        "de": "Heute {periods}",
+        "en": "Today {periods}",
+        "fr": "Aujourd'hui {periods}",
+        "it": "Oggi {periods}",
+    },
+    "opening_today_closed": {
+        "de": "Heute geschlossen",
+        "en": "Closed today",
+        "fr": "Fermé aujourd'hui",
+        "it": "Oggi chiuso",
+    },
+    "opening_24h": {
+        "de": "24 h geöffnet",
+        "en": "Open 24 h",
+        "fr": "Ouvert 24 h/24",
+        "it": "Aperto 24 ore su 24",
+    },
+    "opening_hours_row_name": {
+        "de": "Öffnungszeiten",
+        "en": "Opening hours",
+        "fr": "Horaires d'ouverture",
+        "it": "Orari di apertura",
+    },
 }
 
 # Maps the raw EvseStatus values from the ich-tanke-strom.ch API to a
