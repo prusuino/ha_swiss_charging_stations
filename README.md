@@ -68,7 +68,7 @@ All favorite entities refresh live (every 5 minutes), independent of any radius 
 
 The integration ships its own Lovelace card, `swiss-charging-stations-card`, showing colored per-connector status boxes — green for available, red for occupied, gray for out of service — each box with the connector's plug type (abbreviated, e.g. "CCS" for CCS Combo 2), charging power, and status. It works for both favorite kinds: a whole site shows one box per connector plus an available/total badge — or a "Closed"/"Out of service" badge when nothing at the site is in service; a single favorite station shows one box.
 
-![Two favorite sites shown with the bundled card (status boxes per connector) above the auto-generated entities list](docs/card-example.png)
+![Favorite sites shown with the bundled card (status boxes per connector) above the auto-generated entities list with per-plug-type availability, status, and opening hours](docs/card-example.png)
 
 The card registers itself automatically (no manual resource setup) and is used on the auto-generated "Favorites" dashboard view. It is also available in the card picker as **Swiss Charging Stations Card** for use anywhere else:
 
