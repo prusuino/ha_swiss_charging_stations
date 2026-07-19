@@ -449,6 +449,9 @@ class FavoriteStationSensor(CoordinatorEntity[FavoriteStationCoordinator], Senso
             or t("opening_unknown", self._hass_ref),
             "closed_all_day_today": is_closed_all_day_today(station),
             "payment_options": station.get("payment_options"),
+            # Operator's declaration that this charge point is supplied with
+            # renewable energy — shown as a leaf on the bundled card.
+            "renewable_energy": station.get("renewable_energy"),
             "last_update": station.get("last_update"),
             "latitude": station.get("latitude"),
             "longitude": station.get("longitude"),
@@ -595,6 +598,7 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
                 "status_raw": c.get("status"),
                 "plug_types": c.get("plugs"),
                 "power_kw": c.get("power_kw"),
+                "renewable": c.get("renewable_energy"),
             }
             # Sorted by EvseID so the card's tile order/numbering matches the
             # per-connector sensors ("Charge Point n"), which are numbered by

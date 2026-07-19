@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.2 — 2026-07-19
+
+- New: the source's **RenewableEnergy** declaration is now read and exposed — as a `renewable_energy` attribute on the favorite status sensor, per connector in the site overview's `connectors` attribute (`renewable`), and as a dark-green leaf badge in the bundled card's header next to the availability badge (for a whole site only when no connector explicitly reports otherwise).
+
 ## 1.7.1 — 2026-07-19
 
 - Changed: the auto-created dashboard is now titled **"Ladestationen CH"** / "Charging Stations CH" (localized) instead of the unsuffixed name, so it stays distinguishable next to sibling integrations for other countries. Existing installations are migrated automatically on the next restart — but only if the dashboard still carries the exact old default title; a title you customized yourself is never touched.

@@ -103,6 +103,7 @@ def _parse_station(feature: dict, lat: float | None = None, lon: float | None = 
         "open_24h": props.get("IsOpen24Hours"),
         "opening_times": [o for o in _as_list(props.get("OpeningTimes")) if isinstance(o, dict)],
         "payment_options": props.get("PaymentOptions") or [],
+        "renewable_energy": props.get("RenewableEnergy"),
     }
 
 
@@ -126,7 +127,7 @@ async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radi
         "propertyName": (
             "EvseID,ChargingStationId,EvseStatus,ChargingFacilities,Plugs,"
             "Address,ChargingStationNames,OperatorID,lastUpdate,IsOpen24Hours,"
-            "OpeningTimes,PaymentOptions,geometry"
+            "OpeningTimes,PaymentOptions,RenewableEnergy,geometry"
         ),
         "cql_filter": f"bbox(geometry,{bbox})",
     }
