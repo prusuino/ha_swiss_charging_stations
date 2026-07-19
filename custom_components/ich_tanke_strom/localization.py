@@ -242,18 +242,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Site {name} avec {count} points de charge",
         "it": "Sito {name} con {count} punti di ricarica",
     },
-    "opening_today": {
-        "de": "Heute {periods}",
-        "en": "Today {periods}",
-        "fr": "Aujourd'hui {periods}",
-        "it": "Oggi {periods}",
-    },
-    "opening_today_closed": {
-        "de": "Heute geschlossen",
-        "en": "Closed today",
-        "fr": "Fermé aujourd'hui",
-        "it": "Oggi chiuso",
-    },
     "opening_24h": {
         "de": "24 h geöffnet",
         "en": "Open 24 h",
@@ -277,6 +265,19 @@ STATUS_KEY_MAP: dict[str, str] = {
     "OutOfService": "status_out_of_service",
     "Unknown": "status_unknown",
 }
+
+
+# Weekday abbreviations, index 0 = Monday (matching coordinator.API_WEEKDAYS).
+WEEKDAYS_SHORT = {
+    "de": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+    "en": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "fr": ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"],
+    "it": ["lun", "mar", "mer", "gio", "ven", "sab", "dom"],
+}
+
+
+def weekday_short(index: int, hass: HomeAssistant) -> str:
+    return WEEKDAYS_SHORT[get_language(hass)][index]
 
 
 def get_language(hass: HomeAssistant) -> str:

@@ -15,6 +15,9 @@ const STATUS_COLORS = {
   Available: "var(--success-color, #2e7d32)",
   Occupied: "var(--error-color, #c62828)",
   OutOfService: "var(--disabled-text-color, #757575)",
+  // Pseudo status used while the whole site is outside its opening hours —
+  // distinct from the gray "broken" look and the green/red live states.
+  Closed: "var(--info-color, #1565c0)",
 };
 const UNKNOWN_COLOR = "var(--warning-color, #f9a825)";
 
@@ -185,9 +188,10 @@ class SwissChargingStationsCard extends HTMLElement {
       [attrs.postal_code, attrs.city].filter(Boolean).join(" "),
     ].filter(Boolean);
     const address = addressParts.join(", ");
-    // Localized server-built line ("Heute 07:30–20:00" / "24 h geöffnet"),
-    // absent when the source has no schedule data for this site.
-    const openingHours = attrs.opening_hours_today || "";
+    // Localized server-built weekly schedule ("Mo–Fr 08:00–20:00 · Sa
+    // 07:30–18:00" / "24 h geöffnet"), absent when the source has no
+    // schedule data for this site.
+    const openingHours = attrs.opening_hours || "";
 
     // When the site is closed (outside opening hours) the operator may keep
     // reporting connectors as Available — technically correct, but you can't
@@ -213,7 +217,7 @@ class SwissChargingStationsCard extends HTMLElement {
       }
       boxes = attrs.connectors.map((c, i) =>
         this._box(
-          siteClosed ? "OutOfService" : c.status_raw,
+          siteClosed ? "Closed" : c.status_raw,
           siteClosed ? closedWord : c.status,
           c.power_kw,
           shortPlugs(c.plug_types, this._lang()),
@@ -223,7 +227,7 @@ class SwissChargingStationsCard extends HTMLElement {
     } else {
       boxes = [
         this._box(
-          siteClosed ? "OutOfService" : attrs.status_raw,
+          siteClosed ? "Closed" : attrs.status_raw,
           siteClosed ? closedWord : stateObj.state,
           attrs.power_kw,
           shortPlugs(attrs.plug_types, this._lang()),
@@ -254,6 +258,10 @@ class SwissChargingStationsCard extends HTMLElement {
           background: var(--disabled-text-color, #757575);
           color: #fff;
         }
+        .badge.closed {
+          background: var(--info-color, #1565c0);
+          color: #fff;
+        }
         .addr {
           font-size: 0.85em; color: var(--secondary-text-color);
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -278,7 +286,7 @@ class SwissChargingStationsCard extends HTMLElement {
         <div class="wrap">
           <div class="head">
             <div class="title">${this._escape(title)}</div>
-            ${badge ? `<div class="badge${badgeAlert ? " alert" : ""}">${this._escape(badge)}</div>` : ""}
+            ${badge ? `<div class="badge${badgeAlert ? " alert" : ""}${siteClosed ? " closed" : ""}">${this._escape(badge)}</div>` : ""}
           </div>
           <div class="subhead">
             ${address ? `<div class="addr">${this._escape(address)}</div>` : ""}

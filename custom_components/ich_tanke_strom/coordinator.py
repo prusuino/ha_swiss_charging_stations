@@ -381,23 +381,28 @@ def is_open_now(opening_times: list | None, now: datetime | None = None) -> bool
         return None
 
 
-def opening_periods_today(opening_times: list | None, now: datetime | None = None) -> list[str] | None:
-    """Today's opening periods as display strings ('07:30–20:00'), evaluated
-    in Europe/Zurich like is_open_now. Returns None when no schedule data is
-    present (e.g. 24h sites), [] when the site is closed all day today."""
+API_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def weekly_opening_periods(opening_times: list | None) -> dict[int, list[str]] | None:
+    """The source's OpeningTimes schedule as weekday index (0 = Monday) ->
+    sorted display periods ('07:30–20:00'). Days the schedule omits are
+    absent (closed all day). Returns None when there is no usable schedule
+    data at all (e.g. 24h sites leave OpeningTimes empty)."""
     if not opening_times:
         return None
     try:
-        now = now or datetime.now(ZoneInfo("Europe/Zurich"))
-        weekday = now.strftime("%A")
-        periods: list[str] = []
+        week: dict[int, list[str]] = {}
         for entry in opening_times:
-            if not isinstance(entry, dict) or entry.get("on") != weekday:
+            if not isinstance(entry, dict) or entry.get("on") not in API_WEEKDAYS:
                 continue
+            index = API_WEEKDAYS.index(entry["on"])
             for period in _as_list(entry.get("Period")):
                 if isinstance(period, dict) and period.get("begin") and period.get("end"):
-                    periods.append(f"{period['begin']}–{period['end']}")
-        return sorted(periods)
+                    week.setdefault(index, []).append(f"{period['begin']}–{period['end']}")
+        for periods in week.values():
+            periods.sort()
+        return week or None
     except Exception:  # noqa: BLE001 - malformed schedule data must never break a refresh
         return None
 

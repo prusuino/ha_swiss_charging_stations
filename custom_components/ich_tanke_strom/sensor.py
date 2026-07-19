@@ -33,30 +33,43 @@ from .coordinator import (
     FavoriteStationCoordinator,
     IchTankeStromCoordinator,
     icon_for_status,
-    opening_periods_today,
     site_status,
+    weekly_opening_periods,
 )
 from .dashboard import async_add_location_card
 from .device import device_info
-from .localization import localized_site_status, localized_status, t
+from .localization import localized_site_status, localized_status, t, weekday_short
 
 _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data: ich-tanke-strom.ch (BFE / EnergieSchweiz / swisstopo)"
 
 
 def _opening_hours_display(data: dict, hass) -> str | None:
-    """Localized one-line opening-hours text for today ('Heute 07:30–20:00',
-    'Heute geschlossen', '24 h geöffnet') — None when the source has no
-    schedule data for this site. Rendered by the bundled card below the
-    address."""
+    """Localized one-line weekly opening schedule ('Mo–Fr 08:00–20:00 ·
+    Sa 07:30–18:00', or '24 h geöffnet') — None when the source has no
+    schedule data for this site. Consecutive weekdays with identical hours
+    are collapsed into a range; days the schedule omits are closed and left
+    out. Rendered by the bundled card below the address and as a row on the
+    auto-generated dashboard card."""
     if data.get("open_24h"):
         return t("opening_24h", hass)
-    periods = opening_periods_today(data.get("opening_times"))
-    if periods is None:
+    week = weekly_opening_periods(data.get("opening_times"))
+    if not week:
         return None
-    if not periods:
-        return t("opening_today_closed", hass)
-    return t("opening_today", hass, periods=", ".join(periods))
+    groups: list[list] = []  # [start_index, end_index, periods]
+    for index in range(7):
+        periods = week.get(index)
+        if not periods:
+            continue
+        if groups and groups[-1][1] == index - 1 and groups[-1][2] == periods:
+            groups[-1][1] = index
+        else:
+            groups.append([index, index, periods])
+    parts = []
+    for start, end, periods in groups:
+        days = weekday_short(start, hass) if start == end else f"{weekday_short(start, hass)}–{weekday_short(end, hass)}"
+        parts.append(f"{days} {', '.join(periods)}")
+    return " · ".join(parts)
 
 
 async def async_setup_entry(
@@ -85,7 +98,7 @@ async def async_setup_entry(
                         {
                             "type": "attribute",
                             "entity": status_sensor.entity_id,
-                            "attribute": "opening_hours_today",
+                            "attribute": "opening_hours",
                             "name": t("opening_hours_row_name", hass),
                             "icon": "mdi:clock-outline",
                         },
@@ -195,7 +208,7 @@ def _build_location_card_entities(
         {
             "type": "attribute",
             "entity": summary_sensor.entity_id,
-            "attribute": "opening_hours_today",
+            "attribute": "opening_hours",
             "name": t("opening_hours_row_name", hass),
             "icon": "mdi:clock-outline",
         },
@@ -310,7 +323,7 @@ class FavoriteStationSensor(CoordinatorEntity[FavoriteStationCoordinator], Senso
             "city": station.get("city"),
             "postal_code": station.get("postal_code"),
             "open_24h": station.get("open_24h"),
-            "opening_hours_today": _opening_hours_display(station, self._hass_ref),
+            "opening_hours": _opening_hours_display(station, self._hass_ref),
             "payment_options": station.get("payment_options"),
             "last_update": station.get("last_update"),
             "latitude": station.get("latitude"),
@@ -473,7 +486,7 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
             "city": location.get("city"),
             "postal_code": location.get("postal_code"),
             "open_24h": location.get("open_24h"),
-            "opening_hours_today": _opening_hours_display(location, self._hass_ref),
+            "opening_hours": _opening_hours_display(location, self._hass_ref),
             "latitude": location.get("latitude"),
             "longitude": location.get("longitude"),
             "connectors": connectors,
