@@ -79,7 +79,26 @@ const EDITOR_LABELS = {
     fr: "Titre (optionnel)",
     it: "Titolo (opzionale)",
   },
+  plug_types: {
+    de: "Sichtbare Steckertypen (leer = alle)",
+    en: "Visible plug types (empty = all)",
+    fr: "Types de prises visibles (vide = tous)",
+    it: "Tipi di presa visibili (vuoto = tutti)",
+  },
 };
+
+// All plug-type values observed in the national data set — offered in the
+// editor when the selected entity's own connector list isn't available yet.
+const KNOWN_PLUG_TYPES = [
+  "CCS Combo 1 Plug (Cable Attached)",
+  "CCS Combo 2 Plug (Cable Attached)",
+  "CHAdeMO",
+  "Tesla Connector",
+  "Type 1 Connector (Cable Attached)",
+  "Type 2 Connector (Cable Attached)",
+  "Type 2 Outlet",
+  "Type J Swiss Standard",
+];
 
 class SwissChargingStationsCardEditor extends HTMLElement {
   setConfig(config) {
@@ -100,6 +119,9 @@ class SwissChargingStationsCardEditor extends HTMLElement {
         ev.stopPropagation();
         const config = { type: "custom:swiss-charging-stations-card", ...ev.detail.value };
         if (!config.title) delete config.title;
+        if (!Array.isArray(config.plug_types) || !config.plug_types.length) {
+          delete config.plug_types;
+        }
         this.dispatchEvent(
           new CustomEvent("config-changed", {
             detail: { config },
@@ -112,7 +134,27 @@ class SwissChargingStationsCardEditor extends HTMLElement {
     }
     const lang = ((this._hass.language || "en").split("-")[0]);
     this._form.hass = this._hass;
-    this._form.data = { entity: this._config.entity || "", title: this._config.title || "" };
+    this._form.data = {
+      entity: this._config.entity || "",
+      title: this._config.title || "",
+      plug_types: this._config.plug_types || [],
+    };
+    // Offer only the plug types that actually exist at the selected site
+    // (falling back to the full national list before an entity is picked).
+    const stateObj = this._hass.states[this._config.entity];
+    const sitePlugs =
+      stateObj && Array.isArray(stateObj.attributes.connectors)
+        ? [
+            ...new Set(
+              stateObj.attributes.connectors.flatMap((c) =>
+                Array.isArray(c.plug_types) ? c.plug_types : []
+              )
+            ),
+          ]
+        : [];
+    const plugOptions = (sitePlugs.length ? sitePlugs : KNOWN_PLUG_TYPES).map(
+      (value) => ({ value, label: shortPlug(value, lang) || value })
+    );
     this._form.schema = [
       {
         name: "entity",
@@ -120,6 +162,12 @@ class SwissChargingStationsCardEditor extends HTMLElement {
         selector: { entity: { domain: "sensor", integration: "ich_tanke_strom" } },
       },
       { name: "title", selector: { text: {} } },
+      {
+        name: "plug_types",
+        selector: {
+          select: { multiple: true, mode: "dropdown", options: plugOptions },
+        },
+      },
     ];
     this._form.computeLabel = (schema) =>
       (EDITOR_LABELS[schema.name] &&
@@ -207,12 +255,37 @@ class SwissChargingStationsCard extends HTMLElement {
     const closedWord =
       SITE_STATUS_WORDS.closed[this._lang()] || SITE_STATUS_WORDS.closed.en;
 
+    // Optional per-card plug-type filter (config `plug_types`, set in the
+    // visual editor): purely visual — the favorite, its sensors, and the
+    // dashboard row keep covering the whole site. Availability badge counts
+    // only the visible connectors then. Tiles keep their original number so
+    // they still match the per-connector sensors. If the filter matches
+    // nothing (e.g. the operator renamed its plug strings), fall back to
+    // showing everything rather than a dead card.
+    const visiblePlugs =
+      Array.isArray(this._config.plug_types) && this._config.plug_types.length
+        ? this._config.plug_types
+        : null;
+    const plugMatch = (plugs) =>
+      !visiblePlugs ||
+      (Array.isArray(plugs) && plugs.some((p) => visiblePlugs.includes(p)));
+
     let boxes;
     let badge = "";
     let badgeClass = "";
     if (isSite) {
-      const total = attrs.count_total || attrs.connectors.length;
-      const available = Number(stateObj.state) || 0;
+      let shown = attrs.connectors.map((c, i) => ({ c, num: i + 1 }));
+      if (visiblePlugs) {
+        const filtered = shown.filter(({ c }) => plugMatch(c.plug_types));
+        if (filtered.length) shown = filtered;
+      }
+      const filtering = shown.length !== attrs.connectors.length;
+      const total = filtering
+        ? shown.length
+        : attrs.count_total || attrs.connectors.length;
+      const available = filtering
+        ? shown.filter(({ c }) => c.status_raw === "Available").length
+        : Number(stateObj.state) || 0;
       const siteWords = SITE_STATUS_WORDS[attrs.site_status];
       if (siteWords) {
         // Whole site closed / out of service — show the reason instead of
@@ -231,13 +304,13 @@ class SwissChargingStationsCard extends HTMLElement {
         badge = `${available}/${total} ${word}`;
         badgeClass = available > 0 ? "ok" : "busy";
       }
-      boxes = attrs.connectors.map((c, i) =>
+      boxes = shown.map(({ c, num }) =>
         this._box(
           siteClosed ? "Closed" : c.status_raw,
           siteClosed ? closedWord : c.status,
           c.power_kw,
           shortPlugs(c.plug_types, this._lang()),
-          i + 1
+          num
         )
       );
     } else {
