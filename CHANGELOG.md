@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.2 — 2026-07-19
+
+- Changed: while a site is closed (outside its opening hours), the bundled card now shows every connector tile as gray "Closed" instead of green "Available" (user report: the operator keeps reporting Available, which is technically correct from the API's perspective, but you can't charge right now — misleading if you only glance at the green tiles). The underlying sensors keep reporting the raw operator status for automations; single-favorite cards get the same treatment via a new `site_status` attribute on the favorite status sensor.
+
 ## 1.6.1 — 2026-07-19
 
 - Fixed: adding a favorite by ID no longer under-counts the site (user report: 2 of 4, 1 of 3, 1 of 8 charge points shown). Several operators give each pole (e.g. `CH*MIG*P*1797` vs `*1813`) or even each connector (aggregators, where the site ID equals the EvseID) its own ID, so a direct ID lookup only ever saw a slice of the site. The ID path now resolves the full physical site through the same operator+address merge the search picker has used since v1.2.1: a site ChargingStationId expands to all connectors at that address automatically, and an EvseID whose site has more charge points opens a new choice step — pin just that charge point, or the whole site (default).

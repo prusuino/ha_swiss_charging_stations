@@ -293,6 +293,16 @@ class FavoriteStationSensor(CoordinatorEntity[FavoriteStationCoordinator], Senso
             # Raw API status alongside the localized state — the bundled
             # Lovelace card keys its colors off this, independent of language.
             "status_raw": station.get("status"),
+            # Same derived status a whole-site favorite has — the card greys
+            # out the tile when the site is closed even though the operator
+            # still reports the connector as Available.
+            "site_status": site_status(
+                {
+                    "connectors": {"_": station},
+                    "open_24h": station.get("open_24h"),
+                    "opening_times": station.get("opening_times"),
+                }
+            ),
             "power_kw": station.get("power_kw"),
             "plug_types": station.get("plugs"),
             "operator": station.get("operator"),

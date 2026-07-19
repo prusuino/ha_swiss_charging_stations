@@ -189,6 +189,13 @@ class SwissChargingStationsCard extends HTMLElement {
     // absent when the source has no schedule data for this site.
     const openingHours = attrs.opening_hours_today || "";
 
+    // When the site is closed (outside opening hours) the operator may keep
+    // reporting connectors as Available — technically correct, but you can't
+    // charge right now, so the tiles must not stay green (user report).
+    const siteClosed = attrs.site_status === "closed";
+    const closedWord =
+      SITE_STATUS_WORDS.closed[this._lang()] || SITE_STATUS_WORDS.closed.en;
+
     let boxes;
     let badge = "";
     let badgeAlert = false;
@@ -206,8 +213,8 @@ class SwissChargingStationsCard extends HTMLElement {
       }
       boxes = attrs.connectors.map((c, i) =>
         this._box(
-          c.status_raw,
-          c.status,
+          siteClosed ? "OutOfService" : c.status_raw,
+          siteClosed ? closedWord : c.status,
           c.power_kw,
           shortPlugs(c.plug_types, this._lang()),
           i + 1
@@ -216,8 +223,8 @@ class SwissChargingStationsCard extends HTMLElement {
     } else {
       boxes = [
         this._box(
-          attrs.status_raw,
-          stateObj.state,
+          siteClosed ? "OutOfService" : attrs.status_raw,
+          siteClosed ? closedWord : stateObj.state,
           attrs.power_kw,
           shortPlugs(attrs.plug_types, this._lang()),
           null
