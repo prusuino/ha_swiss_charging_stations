@@ -34,14 +34,30 @@ _LOGGER = logging.getLogger(__name__)
 DASHBOARD_URL_PATH = "ladestationen"
 DASHBOARD_ICON = "mdi:ev-station"
 FAVORITES_VIEW_PATH = "favoriten"
+# Legacy marker key (pre-1.6.5): a foreign key inside the card dict made
+# Home Assistant's visual editor refuse the card ("editor not supported").
+# Still recognized for migration; new cards are identified via the entity
+# mapping in the persistent store instead and stay marker-free.
 CARD_ENTRY_ID_KEY = "ich_tanke_strom_entry_id"
 
-# Persistent one-shot marker: once the dashboard has been auto-created, it is
-# never created again — if the user deletes it, that choice sticks (removing
-# its sidebar entry additionally needs one restart, a Home Assistant
-# limitation for integration-registered panels).
+# Persistent store, two jobs: (1) one-shot dashboard-created marker — if the
+# user deletes the auto-created dashboard, that choice sticks (removing its
+# sidebar entry additionally needs one restart, a Home Assistant limitation
+# for integration-registered panels); (2) "cards" map entry_id -> entity_id
+# of the card's first (custom) card, used to find our card in the Favorites
+# view without polluting the card config.
 _MARKER_STORE_VERSION = 1
 _MARKER_STORE_KEY = f"{DOMAIN}.dashboard"
+
+
+def _card_entity(card: dict) -> str | None:
+    """The entity of a card's first stacked (custom) card — our identity key."""
+    inner = card.get("cards")
+    if isinstance(inner, list) and inner and isinstance(inner[0], dict):
+        entity = inner[0].get("entity")
+        if isinstance(entity, str) and str(inner[0].get("type", "")).startswith("custom:"):
+            return entity
+    return None
 
 
 async def async_ensure_dashboard(hass: HomeAssistant) -> None:
@@ -60,9 +76,9 @@ async def async_ensure_dashboard(hass: HomeAssistant) -> None:
     if DASHBOARD_URL_PATH in lovelace_data.dashboards:
         # Already exists — don't overwrite (respect any user edits). Also
         # backfill the marker for installations whose dashboard was created
-        # before the marker existed.
+        # before the marker existed. Preserve the rest of the store (cards map).
         if not (marker and marker.get("created")):
-            await store.async_save({"created": True})
+            await store.async_save({**(marker or {}), "created": True})
         return
 
     if marker and marker.get("created"):
@@ -131,7 +147,7 @@ async def async_ensure_dashboard(hass: HomeAssistant) -> None:
         update=False,
     )
 
-    await store.async_save({"created": True})
+    await store.async_save({**(marker or {}), "created": True})
     _LOGGER.info("Charging stations dashboard set up automatically at /%s", DASHBOARD_URL_PATH)
 
 
@@ -139,10 +155,14 @@ async def async_add_location_card(hass: HomeAssistant, entry: ConfigEntry, card:
     """Add or refresh the pre-filled Entities card for one favorite (single
     connector or whole site) in the dashboard's "Favorites" view (creating
     that view if needed), so its status/power/plug type/operator/ID sensors
-    are visible together without manually building a card. Upserts by entry
-    ID — re-running this (e.g. every restart) keeps the card's entity list
-    in sync as connectors appear/disappear, without duplicating it or
-    touching any other card the user has added to the same view."""
+    are visible together without manually building a card. Upserts by the
+    entity of the card's first stacked card (mapping kept in the persistent
+    store) — re-running this (e.g. every restart) keeps the card's entity
+    list in sync as connectors appear/disappear, without duplicating it or
+    touching any other card the user has added to the same view. The card
+    config itself stays free of foreign keys so Home Assistant's visual
+    editor keeps working on it; cards from before 1.6.5 carrying the legacy
+    marker key are migrated to the clean form on first sync."""
     await async_ensure_dashboard(hass)
 
     lovelace_data = hass.data.get(LOVELACE_DATA)
@@ -166,15 +186,30 @@ async def async_add_location_card(hass: HomeAssistant, entry: ConfigEntry, card:
         }
         views.append(favorites_view)
 
+    store: Store = Store(hass, _MARKER_STORE_VERSION, _MARKER_STORE_KEY)
+    data = await store.async_load() or {}
+    card_map: dict = data.setdefault("cards", {})
+
+    new_entity = _card_entity(card)
+    known_entities = {e for e in (card_map.get(entry.entry_id), new_entity) if e}
+
+    def _is_ours(existing: dict) -> bool:
+        if existing.get(CARD_ENTRY_ID_KEY) == entry.entry_id:
+            return True  # legacy marker (pre-1.6.5)
+        existing_entity = _card_entity(existing)
+        return existing_entity is not None and existing_entity in known_entities
+
     cards = favorites_view.setdefault("cards", [])
-    card = {**card, CARD_ENTRY_ID_KEY: entry.entry_id}
-    existing_index = next((i for i, c in enumerate(cards) if c.get(CARD_ENTRY_ID_KEY) == entry.entry_id), None)
+    existing_index = next((i for i, c in enumerate(cards) if isinstance(c, dict) and _is_ours(c)), None)
     if existing_index is None:
         cards.append(card)
     else:
         cards[existing_index] = card
 
     await storage.async_save(config)
+    if new_entity and card_map.get(entry.entry_id) != new_entity:
+        card_map[entry.entry_id] = new_entity
+        await store.async_save(data)
     _LOGGER.info("Synced favorites-dashboard card for entry %s", entry.entry_id)
 
 
@@ -188,6 +223,14 @@ async def async_remove_location_card(hass: HomeAssistant, entry_id: str) -> None
     if lovelace_data is None or DASHBOARD_URL_PATH not in lovelace_data.dashboards:
         return
 
+    store: Store = Store(hass, _MARKER_STORE_VERSION, _MARKER_STORE_KEY)
+    data = await store.async_load() or {}
+    card_map: dict = data.get("cards") or {}
+    stored_entity = card_map.pop(entry_id, None)
+    if stored_entity is not None:
+        data["cards"] = card_map
+        await store.async_save(data)
+
     storage = lovelace_data.dashboards[DASHBOARD_URL_PATH]
     try:
         config = await storage.async_load(False)
@@ -199,8 +242,13 @@ async def async_remove_location_card(hass: HomeAssistant, entry_id: str) -> None
     if favorites_view is None:
         return
 
+    def _is_ours(card: dict) -> bool:
+        if card.get(CARD_ENTRY_ID_KEY) == entry_id:
+            return True  # legacy marker (pre-1.6.5)
+        return stored_entity is not None and _card_entity(card) == stored_entity
+
     cards = favorites_view.get("cards", [])
-    remaining = [c for c in cards if c.get(CARD_ENTRY_ID_KEY) != entry_id]
+    remaining = [c for c in cards if not (isinstance(c, dict) and _is_ours(c))]
     if len(remaining) == len(cards):
         return  # nothing matched — already removed or never added
 

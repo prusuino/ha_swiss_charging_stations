@@ -2,6 +2,7 @@
 
 ## 1.6.5 — 2026-07-19
 
+- Fixed: the auto-generated favorite cards now support Home Assistant's **visual editor** — the internal marker key that identified each card for syncing/removal made the editor refuse the card ("visual editor not supported"). Cards are now identified through the integration's persistent store instead, keeping the card config clean; existing cards are migrated automatically on the next restart.
 - New: the bundled card has an optional **visible plug types** filter (multi-select in the visual editor, `plug_types` in YAML) — tiles of other plug types are hidden and the availability badge counts only the visible connectors (e.g. "1/2 available" for just the CCS chargers of a 3-connector site). Purely visual: the favorite, its sensors, and the dashboard entities card keep covering the whole site. The editor offers the plug types actually present at the selected site; tiles keep their original numbering so they still match the per-connector sensors; a filter matching nothing falls back to showing everything.
 
 ## 1.6.4 — 2026-07-19
