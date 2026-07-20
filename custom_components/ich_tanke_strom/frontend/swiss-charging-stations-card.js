@@ -288,6 +288,9 @@ class SwissChargingStationsCard extends HTMLElement {
     // 07:30–18:00" / "24 h geöffnet"), absent when the source has no
     // schedule data for this site.
     const openingHours = attrs.opening_hours || "";
+    // Published ad-hoc price ("0.57 CHF/kWh"), absent for operators that
+    // publish none — language-neutral source text, shown as-is.
+    const price = attrs.price || "";
 
     // When the site is closed (outside opening hours) the operator may keep
     // reporting connectors as Available — technically correct, but you can't
@@ -448,6 +451,7 @@ class SwissChargingStationsCard extends HTMLElement {
           <div class="subhead">
             ${address ? `<div class="addr">${this._escape(address)}</div>` : ""}
             ${openingHours ? `<div class="addr">${this._escape(openingHours)}</div>` : ""}
+            ${price ? `<div class="addr">${this._escape(price)}</div>` : ""}
           </div>
           <div class="grid">${boxes.join("")}</div>
         </div>

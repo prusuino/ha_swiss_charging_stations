@@ -40,6 +40,7 @@ from .const import (
     UPDATE_INTERVAL_MINUTES,
     WFS_URL,
 )
+from .prices import annotate_prices, get_price_cache
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -332,6 +333,10 @@ def group_by_location(stations: dict[str, dict]) -> dict[str, dict]:
         g["opening_times"] = first.get("opening_times") or []
         g["count_total"] = len(connectors)
         g["count_available"] = sum(1 for c in connectors.values() if c.get("status") == "Available")
+        # Published ad-hoc price, when the coordinator annotated one (see
+        # prices.py). Site-level by nature — every connector at a site
+        # carries the same published price.
+        g["price"] = next((c.get("price") for c in connectors.values() if c.get("price")), None)
         g.setdefault("is_synthetic", False)
     return merged
 
@@ -507,6 +512,10 @@ class IchTankeStromCoordinator(DataUpdateCoordinator[dict]):
         except Exception as err:
             raise UpdateFailed(f"ich-tanke-strom.ch unreachable: {err}") from err
 
+        price_cache = get_price_cache(self.hass)
+        await price_cache.async_ensure_fresh(self.hass)
+        annotate_prices(price_cache, all_stations)
+
         options = self._entry.options
         filtered = apply_filters(
             all_stations,
@@ -576,6 +585,9 @@ class FavoriteStationCoordinator(DataUpdateCoordinator[dict]):
             raise UpdateFailed(f"ich-tanke-strom.ch unreachable: {err}") from err
         if station is None:
             raise UpdateFailed(f"Station {evse_id} no longer found in ich-tanke-strom.ch data")
+        price_cache = get_price_cache(self.hass)
+        await price_cache.async_ensure_fresh(self.hass)
+        station["price"] = price_cache.lookup(station.get("evse_id"), station.get("charging_station_id"))
         return station
 
 
@@ -606,6 +618,10 @@ class FavoriteLocationCoordinator(DataUpdateCoordinator[dict]):
             raise UpdateFailed(f"ich-tanke-strom.ch unreachable: {err}") from err
         if not connectors:
             raise UpdateFailed(f"Location {location_id} no longer has any connectors in ich-tanke-strom.ch data")
+
+        price_cache = get_price_cache(self.hass)
+        await price_cache.async_ensure_fresh(self.hass)
+        annotate_prices(price_cache, connectors)
 
         groups = group_by_location(connectors)
         if evse_ids:

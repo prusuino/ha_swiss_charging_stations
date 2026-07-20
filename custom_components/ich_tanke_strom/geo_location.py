@@ -200,4 +200,7 @@ class ChargingSiteEvent(GeolocationEvent):
             "city": location.get("city"),
             "postal_code": location.get("postal_code"),
             "open_24h": location.get("open_24h"),
+            # Published ad-hoc price ("0.57 CHF/kWh"), None for operators
+            # that publish none — see prices.py.
+            "price": location.get("price"),
         }

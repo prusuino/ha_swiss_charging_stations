@@ -43,8 +43,9 @@ The radius is capped at **30 km**: larger areas make the source server slow (20�
 | `sensor.charging_station_favorite_<name>_plug_type` | Sensor | Plug type(s) available at the station. |
 | `sensor.charging_station_favorite_<name>_operator` | Sensor | The station's operator. |
 | `sensor.charging_station_favorite_<name>_station_id` | Sensor | The station's EvseID (diagnostic). |
+| `sensor.charging_station_favorite_<name>_price` | Sensor | The published ad-hoc (direct payment) price, e.g. "0.57 CHF/kWh" — kept as the source's free-text since some operators add time components ("+ 0.25 CHF/Min (> 1h)"). Only about a quarter of Swiss sites publish a price; the rest show a localized "Not published". Raw value (or none) as a `price` attribute. See [Data source & license](#data-source--license). |
 
-A pre-filled card listing all five is also added automatically to a "Favorites" view on the [automatic dashboard](#automatic-dashboard).
+A pre-filled card listing all of them is also added automatically to a "Favorites" view on the [automatic dashboard](#automatic-dashboard).
 
 ### Favorite site
 
@@ -58,6 +59,7 @@ A pre-filled card listing all five is also added automatically to a "Favorites" 
 | `sensor.charging_station_favorite_location_<name>_connector_<n>_plug_type` | Sensor | Plug type(s) of connector `<n>`. |
 | `sensor.charging_station_favorite_location_<name>_connector_<n>_operator` | Sensor | Operator of connector `<n>`. |
 | `sensor.charging_station_favorite_location_<name>_connector_<n>_station_id` | Sensor | The connector's own EvseID (diagnostic). |
+| `sensor.charging_station_favorite_location_<name>_price` | Sensor | The site's published ad-hoc price — same behavior as the single-favorite price sensor above. |
 
 One set of these five per connector is created automatically (e.g. a site with 6 connectors gets 6×5 = 30 connector sensors, plus the summary sensor above). A pre-filled card listing all of them (status/power/plug type per connector) is also added automatically to a "Favorites" view on the [automatic dashboard](#automatic-dashboard).
 
@@ -69,7 +71,7 @@ All favorite entities refresh live (every 5 minutes), independent of any radius 
 
 The integration ships its own Lovelace card, `swiss-charging-stations-card`, showing colored per-connector status boxes — green for available, red for occupied, gray for out of service, blue while the site is closed (outside its opening hours), yellow when the operator reports no usable status — each box with the connector's plug type (abbreviated, e.g. "CCS" for CCS Combo 2), charging power, and status. Clicking a box opens the connector's more-info dialog.
 
-The header shows the site name, its address, and the weekly opening hours with consecutive days collapsed ("Mon–Fri 08:00–20:00 · Sat 07:30–18:00", or "Open 24 h"; omitted when the source has no schedule data). Up to three uniform badges stack vertically in the corner:
+The header shows the site name, its address, the weekly opening hours with consecutive days collapsed ("Mon–Fri 08:00–20:00 · Sat 07:30–18:00", or "Open 24 h"; omitted when the source has no schedule data), and the published price ("0.57 CHF/kWh"; omitted when the operator publishes none). Up to three uniform badges stack vertically in the corner:
 
 - **Availability** — "3/8 available" (green while at least one connector is free, red when all are taken), switching to "Closed" outside opening hours, "Closed today" on full-day closures, or "Out of service" when nothing at the site is in service.
 - **Accessibility** (gray-blue) — the source's access declaration: "Publicly accessible", "Restricted access", or "Paid access" (localized). Also exposed as `accessibility` (raw) and `accessibility_text` attributes on the favorite status and site overview sensors.
@@ -138,6 +140,8 @@ Favoriting a station or a whole site adds a second view, **"Favorites"**, to tha
 ## Data source & license
 
 This integration reads live data from the official ich-tanke-strom.ch WFS API. Citing the source is required whenever this data is displayed — see [NOTICE.md](NOTICE.md) for details. Every entity sets Home Assistant's `attribution` attribute accordingly.
+
+Charging prices come from a second source: the ["Ladepreiskarte Swiss eMobility"](https://opendata.swiss/de/dataset/ladepreiskarte-swiss-emobility) open dataset (price atlas by Swiss eMobility / chargeprice.app), as republished by the SFOE in the charging-station layer on data.geo.admin.ch — the same values ich-tanke-strom.ch and map.geo.admin.ch display. Prices are the operators' published ad-hoc (direct payment) rates, not contract or roaming tariffs, and only exist for operators that report them (roughly a quarter of all Swiss sites). They are fetched at most every 6 hours; a price fetch failure never affects the availability data.
 
 ## Disclaimer
 

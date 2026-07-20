@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.8.0 — 2026-07-20
+
+- New: **charging prices**. For operators that publish their ad-hoc (direct payment) price to the Swiss eMobility price atlas — about a quarter of all Swiss sites, including Swisscharge, MOVE, Energie 360°, IWB, AVIA VOLT, GOFAST, M-Charge, PLUG'N ROLL, ewz, Electra, and Fastned — the integration now shows it:
+  - a **Price sensor** per favorite (single charge point and whole site), e.g. "0.57 CHF/kWh"; the source's free-text is kept as-is since some operators add time components ("+ 0.25 CHF/Min (> 1h)"). Sites without a published price show a localized "Not published". The raw value (or `None`) is available as a `price` attribute for automations.
+  - a price line on the **bundled card** header, below the address and opening hours (only when a price is published).
+  - a price row on the **auto-generated dashboard cards**.
+  - the price after the distance in the **favorite picker** labels ("📍 Migros Möhlin (4 charge points) · 1.2 km · 0.45 CHF/kWh").
+  - a `price` attribute on the radius map markers.
+- Prices come from the "Ladepreiskarte Swiss eMobility" open dataset (price atlas by chargeprice.app), republished by the SFOE on data.geo.admin.ch — the same values ich-tanke-strom.ch and map.geo.admin.ch display. They are fetched at most every 6 hours by one shared cache; a price fetch failure never affects the availability data.
+
 ## 1.7.5 — 2026-07-19
 
 - New: the card's header badges now stack vertically at a uniform size: availability, accessibility, renewable energy. A new **hide badges** multi-select in the visual editor (`hidden_badges` in YAML) hides individual ones.

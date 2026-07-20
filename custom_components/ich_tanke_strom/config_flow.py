@@ -55,6 +55,7 @@ from .coordinator import (
     group_by_location,
 )
 from .localization import location_display_label, station_display_label, t
+from .prices import annotate_prices, get_price_cache
 
 CONF_MODE = "mode"
 MODE_RADIUS = "radius"
@@ -226,6 +227,11 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
                     if not stations:
                         errors["base"] = "no_stations_found"
                     else:
+                        # Best-effort price annotation so the picker labels
+                        # can show the published price after the distance.
+                        price_cache = get_price_cache(self.hass)
+                        await price_cache.async_ensure_fresh(self.hass)
+                        annotate_prices(price_cache, stations)
                         self._favorite_candidates = stations
                         return await self.async_step_favorite_pick()
 

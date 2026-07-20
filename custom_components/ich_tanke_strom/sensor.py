@@ -89,7 +89,8 @@ async def async_setup_entry(
         plug_sensor = FavoriteStationPlugTypeSensor(hass, coordinator, entry)
         operator_sensor = FavoriteStationOperatorSensor(hass, coordinator, entry)
         id_sensor = FavoriteStationIdSensor(hass, coordinator, entry)
-        async_add_entities([status_sensor, power_sensor, plug_sensor, operator_sensor, id_sensor])
+        price_sensor = FavoriteStationPriceSensor(hass, coordinator, entry)
+        async_add_entities([status_sensor, power_sensor, plug_sensor, operator_sensor, id_sensor, price_sensor])
 
         site_name = _favorite_name(entry, coordinator.data or {})
         card = {
@@ -107,6 +108,7 @@ async def async_setup_entry(
                             "name": t("opening_hours_row_name", hass),
                             "icon": "mdi:clock-outline",
                         },
+                        {"entity": price_sensor.entity_id, "name": t("favorite_price_name", hass)},
                         {"entity": power_sensor.entity_id, "name": t("favorite_power_name", hass)},
                         {"entity": plug_sensor.entity_id, "name": t("favorite_plug_type_name", hass)},
                         {"entity": operator_sensor.entity_id, "name": t("favorite_operator_name", hass)},
@@ -124,7 +126,8 @@ async def async_setup_entry(
         site_slug = slugify(site_name)
         summary_sensor = FavoriteLocationSensor(hass, location_coordinator, entry)
         status_sensor = FavoriteLocationStatusSensor(hass, location_coordinator, entry, site_slug)
-        async_add_entities([summary_sensor, status_sensor])
+        price_sensor = FavoriteLocationPriceSensor(hass, location_coordinator, entry, site_slug)
+        async_add_entities([summary_sensor, status_sensor, price_sensor])
 
         known_connectors: dict[str, list] = {}
         known_plug_sensors: dict[str, FavoriteLocationPlugAvailableSensor] = {}
@@ -198,7 +201,7 @@ async def async_setup_entry(
                         {
                             "type": "entities",
                             "entities": _build_location_card_entities(
-                                hass, known_connectors, known_plug_sensors, summary_sensor, status_sensor
+                                hass, known_connectors, known_plug_sensors, summary_sensor, status_sensor, price_sensor
                             ),
                         },
                     ],
@@ -267,6 +270,7 @@ def _build_location_card_entities(
     known_plug_sensors: dict[str, "FavoriteLocationPlugAvailableSensor"],
     summary_sensor,
     status_sensor,
+    price_sensor,
 ) -> list[dict]:
     entities = [
         {"entity": summary_sensor.entity_id, "name": t("favorite_location_available_name", hass)},
@@ -296,6 +300,7 @@ def _build_location_card_entities(
             "icon": "mdi:clock-outline",
         }
     )
+    entities.append({"entity": price_sensor.entity_id, "name": t("favorite_price_name", hass)})
     for index, evse_id in enumerate(sorted(known_connectors), start=1):
         status_entity, power_entity, plug_entity, operator_entity, id_entity = known_connectors[evse_id]
         entities.append({"type": "section", "label": t("favorite_location_connector_prefix", hass, n=index)})
@@ -448,6 +453,10 @@ class FavoriteStationSensor(CoordinatorEntity[FavoriteStationCoordinator], Senso
             "opening_hours_text": _opening_hours_display(station, self._hass_ref)
             or t("opening_unknown", self._hass_ref),
             "closed_all_day_today": is_closed_all_day_today(station),
+            # Published ad-hoc price ("0.57 CHF/kWh"), None for the roughly
+            # three quarters of operators that publish none — the bundled
+            # card renders a price line only when present.
+            "price": station.get("price"),
             "payment_options": station.get("payment_options"),
             # Operator's declaration that this charge point is supplied with
             # renewable energy — shown as a leaf badge on the bundled card.
@@ -552,6 +561,38 @@ class FavoriteStationIdSensor(CoordinatorEntity[FavoriteStationCoordinator], Sen
         return self._entry.data[CONF_STATION_ID]
 
 
+class FavoriteStationPriceSensor(CoordinatorEntity[FavoriteStationCoordinator], SensorEntity):
+    """Published ad-hoc (direct payment) price at this favorite station, as
+    listed in the Swiss eMobility price atlas — e.g. "0.57 CHF/kWh". Kept as
+    the source's free-text (some operators add time components like
+    "+ 0.25 CHF/Min (> 1h)"), so no numeric device class. Only about a
+    quarter of Swiss sites publish a price; the rest show a localized
+    "not published"."""
+
+    _attr_has_entity_name = False
+    _attr_attribution = "Prices: Ladepreisatlas Swiss eMobility (chargeprice.app) via BFE / data.geo.admin.ch"
+    _attr_icon = "mdi:cash"
+
+    def __init__(self, hass: HomeAssistant, coordinator: FavoriteStationCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._hass_ref = hass
+        name = _favorite_name(entry, coordinator.data or {})
+        self._attr_name = t("favorite_price_name", hass)
+        self._attr_unique_id = f"{entry.entry_id}_price"
+        self._attr_device_info = device_info(hass, entry)
+        self.entity_id = f"sensor.charging_station_favorite_{slugify(name)}_price"
+
+    @property
+    def native_value(self):
+        return (self.coordinator.data or {}).get("price") or t("price_unknown", self._hass_ref)
+
+    @property
+    def extra_state_attributes(self):
+        # Raw value for automations/templates — None when not published,
+        # while the state shows a localized fallback text.
+        return {"price": (self.coordinator.data or {}).get("price")}
+
+
 def _favorite_location_name(entry: ConfigEntry, location: dict) -> str:
     return (
         entry.data.get(CONF_FAVORITE_NAME)
@@ -643,6 +684,10 @@ class FavoriteLocationSensor(CoordinatorEntity[FavoriteLocationCoordinator], Sen
             # True on full-day closures (e.g. Sundays) — the card badge says
             # "closed today" instead of just "closed" then.
             "closed_all_day_today": is_closed_all_day_today(location),
+            # Published ad-hoc price ("0.57 CHF/kWh"), None for the roughly
+            # three quarters of operators that publish none — the bundled
+            # card renders a price line only when present.
+            "price": location.get("price"),
             "latitude": location.get("latitude"),
             "longitude": location.get("longitude"),
             "connectors": connectors,
@@ -690,6 +735,34 @@ class FavoriteLocationStatusSensor(CoordinatorEntity[FavoriteLocationCoordinator
     def extra_state_attributes(self):
         # Raw key for automations — the state itself is localized.
         return {"site_status": self._status()}
+
+
+class FavoriteLocationPriceSensor(CoordinatorEntity[FavoriteLocationCoordinator], SensorEntity):
+    """Published ad-hoc (direct payment) price at this favorite site — see
+    FavoriteStationPriceSensor. Site-level by nature: every connector at a
+    site carries the same published price."""
+
+    _attr_has_entity_name = False
+    _attr_attribution = "Prices: Ladepreisatlas Swiss eMobility (chargeprice.app) via BFE / data.geo.admin.ch"
+    _attr_icon = "mdi:cash"
+
+    def __init__(
+        self, hass: HomeAssistant, coordinator: FavoriteLocationCoordinator, entry: ConfigEntry, site_slug: str
+    ) -> None:
+        super().__init__(coordinator)
+        self._hass_ref = hass
+        self._attr_name = t("favorite_price_name", hass)
+        self._attr_unique_id = f"{entry.entry_id}_price"
+        self._attr_device_info = device_info(hass, entry)
+        self.entity_id = f"sensor.charging_station_favorite_location_{site_slug}_price"
+
+    @property
+    def native_value(self):
+        return (self.coordinator.data or {}).get("price") or t("price_unknown", self._hass_ref)
+
+    @property
+    def extra_state_attributes(self):
+        return {"price": (self.coordinator.data or {}).get("price")}
 
 
 class FavoriteLocationPlugAvailableSensor(CoordinatorEntity[FavoriteLocationCoordinator], SensorEntity):

@@ -290,6 +290,18 @@ STRINGS: dict[str, dict[str, str]] = {
         "fr": "Inconnu",
         "it": "Sconosciuto",
     },
+    "favorite_price_name": {
+        "de": "Preis",
+        "en": "Price",
+        "fr": "Prix",
+        "it": "Prezzo",
+    },
+    "price_unknown": {
+        "de": "Keine Angabe",
+        "en": "Not published",
+        "fr": "Non communiqué",
+        "it": "Non pubblicato",
+    },
 }
 
 # Maps the raw EvseStatus values from the ich-tanke-strom.ch API to a
@@ -350,16 +362,27 @@ def localized_site_status(status: str | None, hass: HomeAssistant) -> str:
     return t(key, hass)
 
 
+def _with_price(label: str, entry: dict) -> str:
+    """Append the published ad-hoc price to a picker label when one exists
+    ("… · 0.57 CHF/kWh"). The price text is language-neutral source data, so
+    no per-language template is needed."""
+    price = entry.get("price")
+    return f"{label} · {price}" if price else label
+
+
 def station_display_label(station: dict, hass: HomeAssistant) -> str:
     """One-line label for a station in the favorite-picker dropdown."""
     name = station.get("station_name") or station.get("city") or t("station_fallback_name", hass)
-    return t(
-        "favorite_pick_label",
-        hass,
-        name=name,
-        power=station.get("power_kw") or 0,
-        distance=station.get("distance_km"),
-        status=localized_status(station.get("status"), hass),
+    return _with_price(
+        t(
+            "favorite_pick_label",
+            hass,
+            name=name,
+            power=station.get("power_kw") or 0,
+            distance=station.get("distance_km"),
+            status=localized_status(station.get("status"), hass),
+        ),
+        station,
     )
 
 
@@ -367,12 +390,15 @@ def location_display_label(location: dict, hass: HomeAssistant) -> str:
     """One-line label for a whole physical site in the favorite-picker
     dropdown, listed alongside the individual per-connector options."""
     name = location.get("station_name") or location.get("city") or t("station_fallback_name", hass)
-    return t(
-        "favorite_location_pick_label",
-        hass,
-        name=name,
-        count=location.get("count_total", 0),
-        distance=location.get("distance_km"),
+    return _with_price(
+        t(
+            "favorite_location_pick_label",
+            hass,
+            name=name,
+            count=location.get("count_total", 0),
+            distance=location.get("distance_km"),
+        ),
+        location,
     )
 
 
