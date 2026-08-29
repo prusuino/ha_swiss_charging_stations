@@ -1,6 +1,6 @@
 # Swiss Charging Stations (ich-tanke-strom.ch)
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 <a href="https://www.buymeacoffee.com/prusuino"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="20"></a>
 
@@ -20,19 +20,46 @@ ich-tanke-strom.ch operates a public WFS/GeoServer API covering roughly **19,000
 
 | Entity | Type | Description |
 |---|---|---|
-| `geo_location.ladestation_...` | Geo-location | One per matching charging **site** (connectors at the same location are grouped, so multi-charger sites don't stack indistinguishable markers). State = distance from your configured location (km). The map label shows availability — "6/7 available" for multi-connector sites, the plain status for single chargers — refreshed live on every update. Attributes: available/total count, max power (kW), plug types, operator, address, opening hours. |
+| `geo_location.charging_station_...` (English) / `geo_location.ladestation_...` (German) — see [Addressing the map markers](#addressing-the-map-markers) | Geo-location | One per matching charging **site** (connectors at the same location are grouped, so multi-charger sites don't stack indistinguishable markers). State = distance from your configured location (km). The map label shows availability — "6/7 available" for multi-connector sites, the plain status for single chargers — refreshed live on every update; the marker goes unavailable while the data source is unreachable. Attributes: available/total count, max power (kW), plug types, operator, address, opening hours. |
 | `sensor.charging_stations_available_<radius>km` | Sensor | Count of currently available stations matching the active filters within the radius. Attributes include totals, active filter values, the plug types/operators found in range, and `available_by_plug_type` — the available count per plug type as a dictionary. |
 | `sensor.charging_stations_available_<radius>km_<plug>` | Sensor | Optional, one per plug type selected in the integration's **Configure** dialog (e.g. `..._ccs2`, `..._type2_cable`): count of available charge points offering that plug type. Respects the minimum-power and operator filters but ignores the live plug-type/status filters — filtering the map to Type 2 doesn't zero your "free CCS" count. |
-| `number.charging_stations_min_power_kw` | Number | Minimum power filter (kW) — e.g. set to 50 to only show fast chargers. Takes effect immediately. |
-| `select.charging_stations_plug_type` | Select | Plug type filter, options discovered dynamically from stations in range (e.g. CCS, Type 2, CHAdeMO). |
-| `select.charging_stations_status` | Select | Availability filter: all / available only / occupied only. |
-| `select.charging_stations_operator` | Select | Operator filter, options discovered dynamically from stations in range. |
+| `number.charging_stations_min_power_kw_<radius>km` | Number | Minimum power filter (kW) — e.g. set to 50 to only show fast chargers. Takes effect immediately. |
+| `select.charging_stations_plug_type_<radius>km` | Select | Plug type filter, options discovered dynamically from stations in range (e.g. CCS, Type 2, CHAdeMO). |
+| `select.charging_stations_status_<radius>km` | Select | Availability filter: all / available only / occupied only. |
+| `select.charging_stations_operator_<radius>km` | Select | Operator filter, options discovered dynamically from stations in range. |
+
+`<radius>` is the entry's radius in km — `sensor.charging_stations_available_15km`, `select.charging_stations_status_15km` — so the entities of two radius entries stay apart. These are the ids suggested when an entity is first created; the filter entities of a radius entry set up with version 1.9 or earlier keep the ids they already have (without the radius suffix), and any entity can be renamed in its settings at any time.
 
 Filter changes via the `number`/`select` entities apply immediately — no waiting for the next poll. Data is refreshed every 5 minutes.
 
 The per-plug-type sensors are enabled in the integration's **Configure** dialog (Settings → Devices & services → Swiss Charging Stations → Configure): a multi-select of the plug types found in the Swiss network. Selecting or deselecting a type adds or removes its sensor immediately, no restart needed.
 
 The radius is capped at **30 km**: larger areas make the source server slow (20–40+ seconds per fetch) and would flood Home Assistant with thousands of entities. Independently of the radius, at most the **500 nearest sites** get a map marker — the availability count sensor always covers the full filtered set.
+
+#### Addressing the map markers
+
+The map markers are the one kind of entity without a fixed entity id: Home Assistant derives the object id from the entity's name, and that name is localized. The same site is `geo_location.ladestation_50kw_migros_aarau` on a German instance and `geo_location.charging_station_50kw_migros_aarau` on an English one (French `geo_location.borne_de_recharge_…`, Italian `geo_location.stazione_di_ricarica_…`). A card or template written against one language finds nothing on the other, so do not address markers by entity id — use their `source` attribute, which is always `ich_tanke_strom`:
+
+- **Map card** — `geo_location_sources` draws every marker of this integration (also the ones hidden from the auto-generated overview) and follows sites as they come and go, and it can put the live availability on the marker label:
+
+  ```yaml
+  type: map
+  geo_location_sources:
+    - source: ich_tanke_strom
+      label_mode: attribute
+      attribute: status
+  ```
+
+- **Templates** — filter the `geo_location` domain on the `source` attribute instead of naming entities:
+
+  ```jinja
+  {{ states.geo_location
+     | selectattr('attributes.source', 'eq', 'ich_tanke_strom')
+     | selectattr('attributes.count_available', 'gt', 0)
+     | map(attribute='name') | list }}
+  ```
+
+  This lists the sites in range with at least one free charger, in any language.
 
 ### Favorite station
 
@@ -183,9 +210,13 @@ That view is regenerated like the full dashboard is, so new config entries still
 
 ### HACS (recommended)
 
-1. In HACS, go to **Integrations → ⋮ → Custom repositories**, add this repository URL with category **Integration**.
-2. Search for **"Swiss Charging Stations"** and install.
-3. Restart Home Assistant.
+1. Open **HACS**, search for **"Swiss Charging Stations"** and download it — or use the button, which opens the integration directly in your HACS:
+
+   [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=prusuino&repository=ha_swiss_charging_stations&category=integration)
+
+2. Restart Home Assistant.
+
+Until the integration shows up in the HACS search, the button above adds it as a custom repository.
 
 ### Manual
 
@@ -207,7 +238,7 @@ That view is regenerated like the full dashboard is, so new config entries still
 - Only relevant for locations in or near Switzerland.
 - Data quality/freshness varies by charging network operator — some feeds update within minutes, others less frequently. This reflects the operators' own reporting, not a limitation of this integration.
 - This integration is unofficial and not affiliated with, endorsed by, or supported by the BFE, EnergieSchweiz, swisstopo, or ich-tanke-strom.ch. It only reads their published Open Data.
-- If the source API is unreachable, entities simply stop updating rather than showing incorrect data.
+- If the source API is unreachable, the sensors and map markers become unavailable instead of showing stale data.
 
 ## Data source & license
 
