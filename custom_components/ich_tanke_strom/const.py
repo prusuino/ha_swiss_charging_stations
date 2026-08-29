@@ -1,6 +1,14 @@
 """Constants for the ich-tanke-strom.ch integration."""
 DOMAIN = "ich_tanke_strom"
 
+# Plain HTTP, deliberately: the GeoServer behind ich-tanke-strom.ch offers no
+# TLS listener on any port — https:// on 8080 or 443 is refused, so there is
+# no secure variant of this endpoint to switch to. The data is public,
+# read-only and carries no credentials: the request sends no token, no
+# cookie and nothing about the user beyond the queried bounding box, so a
+# passive observer learns only the rough area someone is looking at. The URL
+# is defined here rather than built at call time so this stays reviewable in
+# one place; if the operator ever adds TLS, this single line is the change.
 WFS_URL = "http://ich-tanke-strom.switzerlandnorth.cloudapp.azure.com:8080/geoserver/ich-tanke-strom/ows"
 KM_PER_DEGREE = 111.0
 UPDATE_INTERVAL_MINUTES = 5

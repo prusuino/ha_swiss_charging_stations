@@ -45,7 +45,7 @@ The radius is capped at **30 km**: larger areas make the source server slow (20�
 | `sensor.charging_station_favorite_<name>_station_id` | Sensor | The station's EvseID (diagnostic). |
 | `sensor.charging_station_favorite_<name>_price` | Sensor | The published ad-hoc (direct payment) price, e.g. "0.57 CHF/kWh" — kept as the source's free-text since some operators add time components ("+ 0.25 CHF/Min (> 1h)"). Only about a quarter of Swiss sites publish a price; the rest show a localized "Not published". Raw value (or none) as a `price` attribute. See [Data source & license](#data-source--license). |
 
-A pre-filled card listing all of them is also added automatically to a "Favorites" view on the [automatic dashboard](#automatic-dashboard).
+The [dashboard strategy](#dashboard) below lays all of them out for you, without you building a card by hand.
 
 ### Favorite site
 
@@ -61,7 +61,7 @@ A pre-filled card listing all of them is also added automatically to a "Favorite
 | `sensor.charging_station_favorite_location_<name>_connector_<n>_station_id` | Sensor | The connector's own EvseID (diagnostic). |
 | `sensor.charging_station_favorite_location_<name>_price` | Sensor | The site's published ad-hoc price — same behavior as the single-favorite price sensor above. |
 
-One set of these five per connector is created automatically (e.g. a site with 6 connectors gets 6×5 = 30 connector sensors, plus the summary sensor above). A pre-filled card listing all of them (status/power/plug type per connector) is also added automatically to a "Favorites" view on the [automatic dashboard](#automatic-dashboard).
+One set of these five per connector is created automatically (e.g. a site with 6 connectors gets 6×5 = 30 connector sensors, plus the summary sensor above). The [dashboard strategy](#dashboard) below renders the site's summary and per-connector state without you building a card by hand.
 
 Favorites (station or site) intentionally have no `geo_location` map marker — the radius overview already covers map display, so a favorite is tracked purely via its sensors, keeping the map free of clutter.
 
@@ -81,9 +81,22 @@ Each badge can be hidden individually via the visual editor (`hidden_badges` in 
 
 It works for both favorite kinds: a whole site shows one box per connector; a single favorite station shows one box.
 
-![Favorite sites shown with the bundled card (status boxes per connector) above the auto-generated entities list with per-plug-type availability, status, and opening hours](docs/card-example.png)
+![Favorite sites shown with the bundled card (status boxes per connector) above the site's entities: per-plug-type availability, status, and opening hours](docs/card-example.png)
 
-The card registers itself automatically (no manual resource setup) and is used on the auto-generated "Favorites" dashboard view. It is also available in the card picker as **Swiss Charging Stations Card** for use anywhere else, with a visual editor for all options:
+### Adding the card as a resource
+
+The integration serves the card file, but registering it as a Lovelace resource is left to you — the resource list is part of your dashboard configuration, and an integration has no business writing into it. It is a one-time step:
+
+**Settings → Dashboards → ⋮ (top right) → Resources → + Add resource**
+
+| Field | Value |
+|---|---|
+| URL | `/ich_tanke_strom_files/swiss-charging-stations-card.js` |
+| Resource type | JavaScript module |
+
+Then reload the page (Ctrl/Cmd+Shift+R). The same file also contains the [dashboard strategy](#dashboard), so this one resource covers both.
+
+Afterwards the card appears in the card picker as **Swiss Charging Stations Card**, with a visual editor for all options:
 
 ```yaml
 type: custom:swiss-charging-stations-card
@@ -95,19 +108,40 @@ hidden_badges:  # optional: hide individual header badges (availability / access
   - accessibility
 ```
 
-With a `plug_types` filter, boxes of other plug types are hidden and the availability badge counts only the visible connectors (e.g. "1/2 available" for just the CCS chargers of a mixed site). The filter is purely visual — the favorite, its sensors, and the dashboard entities list keep covering the whole site.
+With a `plug_types` filter, boxes of other plug types are hidden and the availability badge counts only the visible connectors (e.g. "1/2 available" for just the CCS chargers of a mixed site). The filter is purely visual — the favorite and its sensors keep covering the whole site.
 
 ## Language
 
 Entity names, the device name, and the dropdown filter values adapt automatically to your Home Assistant language setting — German, English, French, and Italian are supported, with English as the fallback for any other language. Raw plug type / operator names from the source data are shown as-is (they are not translatable identifiers).
 
-## Automatic dashboard
+## Dashboard
 
-On first setup, the integration automatically creates a **"Charging Stations"** dashboard (title localized to your HA language) with a full-screen native Home Assistant Map card, already configured to display each station's status directly on its marker. This only happens once: if you later customize or delete that dashboard yourself, the integration won't touch or re-create it. Note that after deleting it, its sidebar entry disappears with the next restart (a Home Assistant limitation for integration-registered panels).
+The integration ships a **dashboard strategy**: a recipe Home Assistant renders in the browser, rather than a dashboard written into your configuration. Nothing is stored, nothing is overwritten, and the result follows your setup — add a favorite and it appears on the next page load; delete one and it is gone, with no leftover card.
 
-![The auto-generated dashboard map: one marker per charging site, labeled with live availability](docs/map-example.png)
+Requires the card [registered as a resource](#adding-the-card-as-a-resource) (the strategy ships in the same file). Then:
 
-Favoriting a station or a whole site adds a second view, **"Favorites"**, to that same dashboard with a pre-filled Entities card per favorite — feel free to edit or delete it, though it's kept in sync with the favorite's current connectors on every restart.
+1. **Settings → Dashboards → + Add dashboard → New dashboard from scratch**, give it a name.
+2. Open it, then **✏️ (edit) → ⋮ → Raw configuration editor**.
+3. Replace the entire content with:
+
+```yaml
+strategy:
+  type: custom:swiss-charging-stations
+views: []
+```
+
+4. Save.
+
+You get:
+
+- a **Map** view — every station in range on a full-screen map, each marker labeled with its live availability (only shown when a radius search is configured);
+- a **Charging stations** view — the radius search with its filter controls first, then one section per favorite: the bundled card with its per-connector status boxes, plus that favorite's headline sensors as tiles.
+
+![The strategy's map view: one marker per charging site, labeled with live availability](docs/map-example.png)
+
+The strategy also appears under **+ Add dashboard** as *Swiss Charging Stations*, which does the same thing without the raw editor.
+
+Everything the strategy produces is a normal Home Assistant dashboard. If you would rather arrange things yourself, build your own dashboard with the bundled card and the entities above — the strategy is an offer, not a requirement.
 
 ## Installation
 
@@ -129,6 +163,8 @@ Favoriting a station or a whole site adds a second view, **"Favorites"**, to tha
 3. Choose a mode:
    - **Radius overview**: latitude/longitude default to your Home Assistant home location, set the radius (km). Done — add the integration again for a different location or radius. Adjust the filters afterwards via the `number`/`select` entities.
    - **Favorite station**: enter the station's EvseID directly (e.g. from a QR code on the charger, or looked up on ich-tanke-strom.ch) — the same field also accepts a whole-site ChargingStationId, creating a favorite site directly — or leave it empty and search near a location instead — optionally narrowed by minimum power and plug type — then pick one from the resulting list. The list also includes whole sites (marked with 📍 and their charge point count) alongside individual connectors — pick one of those instead to favorite the entire site. Add the integration again for another favorite.
+
+4. Optional: register the [bundled card](#adding-the-card-as-a-resource) as a resource and set up the [dashboard](#dashboard). The integration works fully without it — this only saves you building the cards yourself.
 
 ## Notes
 
