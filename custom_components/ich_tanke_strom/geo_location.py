@@ -125,6 +125,14 @@ async def async_setup_entry(
 
         for location_id in [e for e in known_entities if e not in locations]:
             entity = known_entities.pop(location_id)
+            # Only the entity is removed; its registry row is kept on
+            # purpose. A site leaves the filtered set as easily as it joins
+            # it (a filter change, a connector going out of service), and
+            # when it comes back the row hands it the same entity id, its
+            # history, and whatever the user changed on it — a rename, an
+            # area, the visibility flag. The per-plug-type sensors in
+            # sensor.py do drop their row, but there the user deselected the
+            # sensor deliberately in the Configure dialog.
             hass.async_create_task(entity.async_remove(force_remove=True))
 
     entry.async_on_unload(coordinator.async_add_listener(_sync_entities))
