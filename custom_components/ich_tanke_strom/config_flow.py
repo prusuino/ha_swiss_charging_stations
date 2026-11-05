@@ -11,9 +11,8 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
@@ -98,7 +97,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
         self._confirm_station: dict | None = None
         self._confirm_location_id: str | None = None
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             if user_input[CONF_MODE] == MODE_FAVORITE:
                 return await self.async_step_favorite()
@@ -119,7 +118,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="user", data_schema=schema)
 
-    async def async_step_radius(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_radius(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Original behavior: a live-filterable overview of every station
         within a location + radius."""
         if user_input is not None:
@@ -148,7 +147,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="radius", data_schema=schema)
 
-    async def async_step_favorite(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_favorite(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Pin one station as a favorite — either by its EvseID directly
         (e.g. from a QR code on the charger), or by searching near a
         location and picking one from a list on the next screen."""
@@ -256,7 +255,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="favorite", data_schema=schema, errors=errors)
 
-    async def async_step_favorite_scope(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_favorite_scope(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """The entered EvseID names one charge point at a multi-connector
         site — ask whether to pin just that charge point or the whole site."""
         site = self._pending_site
@@ -298,7 +297,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_favorite_confirm(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_favorite_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Confirm an ID-resolved favorite before creating it — shows what
         was found (single charge point, or a whole site with its connector
         count) and offers an optional custom name, which the direct ID path
@@ -338,7 +337,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"what": what},
         )
 
-    async def async_step_favorite_pick(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_favorite_pick(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Pick either a single charge point or a whole physical site (all
         its connectors together) from the nearby search results gathered in
         the previous step."""
@@ -382,7 +381,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"count": str(len(connector_options))},
         )
 
-    async def _create_favorite_entry(self, station: dict, custom_name: str | None) -> FlowResult:
+    async def _create_favorite_entry(self, station: dict, custom_name: str | None) -> ConfigFlowResult:
         evse_id = station.get("evse_id")
         if not evse_id:
             return self.async_show_form(
@@ -412,7 +411,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def _create_favorite_location_entry(self, location_id: str, custom_name: str | None) -> FlowResult:
+    async def _create_favorite_location_entry(self, location_id: str, custom_name: str | None) -> ConfigFlowResult:
         location = group_by_location(self._favorite_candidates).get(location_id)
 
         await self.async_set_unique_id(f"favorite_location_{location_id}")
@@ -442,7 +441,7 @@ class IchTankeStromOptionsFlow(OptionsFlow):
     status, operator) intentionally stay on their number/select entities —
     they are meant to be flipped from a dashboard, not buried in a dialog."""
 
-    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if self.config_entry.data.get(CONF_ENTRY_TYPE, ENTRY_TYPE_RADIUS) != ENTRY_TYPE_RADIUS:
             return self.async_abort(reason="no_options")
 

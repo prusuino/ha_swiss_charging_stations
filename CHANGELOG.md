@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.11.1 — 2026-11-05
+
+- **Maintenance release for the Home Assistant Marketplace.** Home Assistant 2026.11 replaces HACS with the built-in Marketplace (Settings → Marketplace); the README now describes installation and updates through it. The release ships the integration as a zip asset, which the Marketplace (and HACS) download in one piece.
+- Internal: `DeviceInfo` is imported from the device registry helper and config-flow results are typed as `ConfigFlowResult`, following current Home Assistant conventions. No behaviour changes.
+- No functional changes. Existing entities, their ids and your configuration are unchanged.
+
 ## 1.11.0 — 2026-08-29
 
 - **Changed: suggested entity ids now carry a short tag of the config entry**, so the entities of two entries can no longer end up with the same suggested id. Version 1.10 put the radius into the ids of a radius entry's filter entities, matching the availability sensor, which keeps a 10 km and a 15 km entry apart — but the flow allows two entries at different locations with the same radius, and two favorite sites may share a name, and in both cases the entities suggested identical ids again (`select.charging_stations_status_15km` twice), which Home Assistant resolves by appending `_2` to whichever entry loads second; an automation copied between them silently targets the wrong one. Every suggested id now has the last four characters of the entry's id, lower-cased, after its radius or name: `sensor.charging_stations_available_15km_7f3a`, `select.charging_stations_status_15km_7f3a`, `sensor.charging_station_favorite_migros_aarau_7f3a_power_kw`, `sensor.charging_station_favorite_location_migros_aarau_7f3a_connector_1_status`. The tag stays fixed for the life of the entry; the README entity tables show the pattern. A suggested id only applies when an entity is first created, so **the entities of existing entries keep the ids they have**, unique ids are unchanged, and there is nothing to do on upgrade.
