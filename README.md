@@ -241,6 +241,7 @@ The integration is listed in the Marketplace default catalog (formerly the HACS 
 - Data quality/freshness varies by charging network operator — some feeds update within minutes, others less frequently. This reflects the operators' own reporting, not a limitation of this integration.
 - This integration is unofficial and not affiliated with, endorsed by, or supported by the BFE, EnergieSchweiz, swisstopo, or ich-tanke-strom.ch. It only reads their published Open Data.
 - If the source API is unreachable, the sensors and map markers become unavailable instead of showing stale data.
+- **Download diagnostics** (entry menu under **Settings → Devices & services**) gives the entry's configuration, what the integration last fetched and the current state of its entities, with coordinates and credentials redacted — attach it to an issue report when something looks wrong.
 
 ## Data source & license
 
