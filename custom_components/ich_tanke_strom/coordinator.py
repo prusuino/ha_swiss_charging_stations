@@ -18,6 +18,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .issues import IssueReporter
 from .const import (
     CONF_LATITUDE,
     CONF_LONGITUDE,
@@ -499,6 +500,7 @@ class IchTankeStromCoordinator(DataUpdateCoordinator[dict]):
             update_interval=timedelta(minutes=UPDATE_INTERVAL_MINUTES),
         )
         self._entry = entry
+        self.issues = IssueReporter(hass, entry.entry_id)
 
     async def _async_update_data(self) -> dict:
         data = self._entry.data
@@ -510,7 +512,9 @@ class IchTankeStromCoordinator(DataUpdateCoordinator[dict]):
                 data[CONF_RADIUS_KM],
             )
         except Exception as err:
+            self.issues.failure("unreachable", {"host": "ich-tanke-strom.ch"})
             raise UpdateFailed(f"ich-tanke-strom.ch unreachable: {err}") from err
+        self.issues.clear("unreachable")
 
         price_cache = get_price_cache(self.hass)
         await price_cache.async_ensure_fresh(self.hass)
@@ -576,15 +580,20 @@ class FavoriteStationCoordinator(DataUpdateCoordinator[dict]):
             update_interval=timedelta(minutes=UPDATE_INTERVAL_MINUTES),
         )
         self._entry = entry
+        self.issues = IssueReporter(hass, entry.entry_id)
 
     async def _async_update_data(self) -> dict:
         evse_id = self._entry.data[CONF_STATION_ID]
         try:
             station = await async_fetch_station_by_id(self.hass, evse_id)
         except Exception as err:
+            self.issues.failure("unreachable", {"host": "ich-tanke-strom.ch"})
             raise UpdateFailed(f"ich-tanke-strom.ch unreachable: {err}") from err
+        self.issues.clear("unreachable")
         if station is None:
+            self.issues.raise_now("favorite_missing", {"station": evse_id})
             raise UpdateFailed(f"Station {evse_id} no longer found in ich-tanke-strom.ch data")
+        self.issues.clear("favorite_missing")
         price_cache = get_price_cache(self.hass)
         await price_cache.async_ensure_fresh(self.hass)
         station["price"] = price_cache.lookup(station.get("evse_id"), station.get("charging_station_id"))
@@ -603,6 +612,7 @@ class FavoriteLocationCoordinator(DataUpdateCoordinator[dict]):
             update_interval=timedelta(minutes=UPDATE_INTERVAL_MINUTES),
         )
         self._entry = entry
+        self.issues = IssueReporter(hass, entry.entry_id)
 
     async def _async_update_data(self) -> dict:
         location_id = self._entry.data[CONF_STATION_LOCATION_ID]
@@ -615,9 +625,13 @@ class FavoriteLocationCoordinator(DataUpdateCoordinator[dict]):
             else:
                 connectors = await async_fetch_station_location(self.hass, location_id)
         except Exception as err:
+            self.issues.failure("unreachable", {"host": "ich-tanke-strom.ch"})
             raise UpdateFailed(f"ich-tanke-strom.ch unreachable: {err}") from err
+        self.issues.clear("unreachable")
         if not connectors:
+            self.issues.raise_now("favorite_missing", {"station": location_id})
             raise UpdateFailed(f"Location {location_id} no longer has any connectors in ich-tanke-strom.ch data")
+        self.issues.clear("favorite_missing")
 
         price_cache = get_price_cache(self.hass)
         await price_cache.async_ensure_fresh(self.hass)

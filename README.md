@@ -283,6 +283,7 @@ The integration is listed in the Marketplace default catalog (formerly the HACS 
 
 ## Notes
 
+- **Repairs.** When the ich-tanke-strom.ch service has not answered for three refreshes in a row, or when a favorite charge point or site is no longer in its data, a notice appears under **Settings → Repairs** that says what happened and what to do; it disappears on its own once the data is back.
 - Only relevant for locations in or near Switzerland.
 - Data quality/freshness varies by charging network operator — some feeds update within minutes, others less frequently. This reflects the operators' own reporting, not a limitation of this integration.
 - This integration is unofficial and not affiliated with, endorsed by, or supported by the BFE, EnergieSchweiz, swisstopo, or ich-tanke-strom.ch. It only reads their published Open Data.
