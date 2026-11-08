@@ -54,7 +54,8 @@
       }
     },
     "abort": {
-      "already_configured": "This location/radius or station is already configured."
+      "already_configured": "This location/radius or station is already configured.",
+      "reconfigure_successful": "The entry was updated and the integration reloaded."
     },
     "error": {
       "cannot_connect": "ich-tanke-strom.ch could not be reached.",

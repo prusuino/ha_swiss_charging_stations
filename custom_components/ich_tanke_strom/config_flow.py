@@ -12,6 +12,7 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.helpers import entity_registry as er
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
     NumberSelector,
@@ -22,6 +23,10 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
 )
+
+# Whether the entry's update listener reloads the entry on a change (then a
+# reconfigure must not reload again, see _finish).
+_LISTENER_RELOADS = False
 
 from .const import (
     CONF_ENTRY_TYPE,
@@ -86,6 +91,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         self._favorite_candidates: dict[str, dict] = {}
+        self._entry: ConfigEntry | None = None
         # Carried between favorite -> favorite_scope when an entered EvseID
         # turns out to sit at a multi-connector site.
         self._pending_station: dict | None = None
@@ -96,6 +102,63 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
         # connectors sit in _favorite_candidates.
         self._confirm_station: dict | None = None
         self._confirm_location_id: str | None = None
+
+    # ------------------------------------------------------------ reconfigure
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
+        """Change the entry with the same steps as its setup. The entry
+        keeps its id, so its entities keep their ids and history; the
+        entities of a station or location that is no longer selected are
+        removed and the reload creates the new ones."""
+        self._entry = self._get_reconfigure_entry()
+        if self._entry.data.get(CONF_ENTRY_TYPE, ENTRY_TYPE_RADIUS) == ENTRY_TYPE_RADIUS:
+            return await self.async_step_radius()
+        return await self.async_step_favorite()
+
+    def _default(self, key: str, fallback: Any) -> Any:
+        """A form default: the entry's current value while reconfiguring."""
+        if self._entry is not None and key in self._entry.data:
+            return self._entry.data[key]
+        return fallback
+
+    def _abort_if_taken(self) -> None:
+        """Like _abort_if_unique_id_configured, except that the entry being
+        reconfigured may keep its own unique id."""
+        if self._entry is None or self.unique_id != self._entry.unique_id:
+            self._abort_if_unique_id_configured()
+
+    def _finish(self, *, title: str, data: dict[str, Any], options: dict[str, Any] | None = None):
+        """Create the entry, or update the one being reconfigured in place."""
+        if self._entry is None:
+            if options is not None:
+                return self.async_create_entry(title=title, data=data, options=options)
+            return self.async_create_entry(title=title, data=data)
+        entry = self._entry
+        if self.unique_id != entry.unique_id:
+            # Another station, location or operator: the entities of the old
+            # one would stay behind as orphans. Drop their registry rows; the
+            # reload creates the new entities, and one whose unique id comes
+            # back gets its entity id back as well.
+            registry = er.async_get(self.hass)
+            for reg_entry in list(er.async_entries_for_config_entry(registry, entry.entry_id)):
+                registry.async_remove(reg_entry.entity_id)
+        # Update, then let the entry's update listener reload it (Home
+        # Assistant asks integrations with a listener to do it that way).
+        # Where the listener only refreshes, the reload is scheduled here.
+        self.hass.config_entries.async_update_entry(
+            entry,
+            unique_id=self.unique_id,
+            title=title,
+            data=data,
+            options=self._reconfigured_options(entry, options),
+        )
+        if not _LISTENER_RELOADS:
+            self.hass.config_entries.async_schedule_reload(entry.entry_id)
+        return self.async_abort(reason="reconfigure_successful")
+
+    def _reconfigured_options(self, entry, options: dict[str, Any] | None) -> dict[str, Any]:
+        """The options to keep on a reconfigure: the user's current ones."""
+        return dict(entry.options)
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
@@ -126,9 +189,9 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             lon = user_input[CONF_LONGITUDE]
             radius = user_input[CONF_RADIUS_KM]
             await self.async_set_unique_id(f"radius_{round(lat, 2)}_{round(lon, 2)}_{radius}")
-            self._abort_if_unique_id_configured()
+            self._abort_if_taken()
 
-            return self.async_create_entry(
+            return self._finish(
                 title=t("device_name", self.hass, radius=radius),
                 data={
                     CONF_ENTRY_TYPE: ENTRY_TYPE_RADIUS,
@@ -140,9 +203,9 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_LATITUDE, default=self.hass.config.latitude): vol.Coerce(float),
-                vol.Required(CONF_LONGITUDE, default=self.hass.config.longitude): vol.Coerce(float),
-                vol.Required(CONF_RADIUS_KM, default=DEFAULT_RADIUS_KM): _RADIUS_SELECTOR,
+                vol.Required(CONF_LATITUDE, default=self._default(CONF_LATITUDE, self.hass.config.latitude)): vol.Coerce(float),
+                vol.Required(CONF_LONGITUDE, default=self._default(CONF_LONGITUDE, self.hass.config.longitude)): vol.Coerce(float),
+                vol.Required(CONF_RADIUS_KM, default=self._default(CONF_RADIUS_KM, DEFAULT_RADIUS_KM)): _RADIUS_SELECTOR,
             }
         )
         return self.async_show_form(step_id="radius", data_schema=schema)
@@ -398,11 +461,11 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         await self.async_set_unique_id(f"favorite_{evse_id}")
-        self._abort_if_unique_id_configured()
+        self._abort_if_taken()
 
         custom_name = (custom_name or "").strip()
         name = custom_name or station.get("station_name") or station.get("city") or evse_id
-        return self.async_create_entry(
+        return self._finish(
             title=t("favorite_device_name", self.hass, name=name),
             data={
                 CONF_ENTRY_TYPE: ENTRY_TYPE_FAVORITE,
@@ -415,7 +478,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
         location = group_by_location(self._favorite_candidates).get(location_id)
 
         await self.async_set_unique_id(f"favorite_location_{location_id}")
-        self._abort_if_unique_id_configured()
+        self._abort_if_taken()
 
         custom_name = (custom_name or "").strip()
         fallback = (location.get("station_name") or location.get("city") or location_id) if location else location_id
@@ -429,7 +492,7 @@ class IchTankeStromConfigFlow(ConfigFlow, domain=DOMAIN):
             # No real ChargingStationId covers this site (see group_by_location) —
             # pin the member EvseIDs so the coordinator can re-fetch it later.
             data[CONF_STATION_LOCATION_EVSE_IDS] = sorted(location["connectors"])
-        return self.async_create_entry(
+        return self._finish(
             title=t("favorite_location_device_name", self.hass, name=name),
             data=data,
         )

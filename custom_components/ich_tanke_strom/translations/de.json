@@ -54,7 +54,8 @@
       }
     },
     "abort": {
-      "already_configured": "Diese Standort-/Umkreis-Kombination oder Station ist bereits konfiguriert."
+      "already_configured": "Diese Standort-/Umkreis-Kombination oder Station ist bereits konfiguriert.",
+      "reconfigure_successful": "Der Eintrag wurde aktualisiert und die Integration neu geladen."
     },
     "error": {
       "cannot_connect": "ich-tanke-strom.ch konnte nicht erreicht werden.",

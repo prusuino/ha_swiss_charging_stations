@@ -54,7 +54,8 @@
       }
     },
     "abort": {
-      "already_configured": "Questa combinazione di posizione/raggio o questa stazione è già configurata."
+      "already_configured": "Questa combinazione di posizione/raggio o questa stazione è già configurata.",
+      "reconfigure_successful": "La voce è stata aggiornata e l'integrazione ricaricata."
     },
     "error": {
       "cannot_connect": "Impossibile raggiungere ich-tanke-strom.ch.",
