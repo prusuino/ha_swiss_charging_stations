@@ -335,7 +335,7 @@ class SwissChargingStationsCard extends HTMLElement {
       const available = filtering
         ? shown.filter(({ c }) => c.status_raw === "Available").length
         : Number(stateObj.state) || 0;
-      const siteWords = SITE_STATUS_WORDS[attrs.site_status];
+      const siteWords = Object.prototype.hasOwnProperty.call(SITE_STATUS_WORDS, attrs.site_status) ? SITE_STATUS_WORDS[attrs.site_status] : undefined;
       if (siteWords) {
         // Whole site closed / out of service — show the reason instead of
         // "0/6". Full-day closures (e.g. Sundays) say "closed today" so the
@@ -474,7 +474,7 @@ class SwissChargingStationsCard extends HTMLElement {
   }
 
   _box(statusRaw, statusText, powerKw, plugShort, num) {
-    const color = STATUS_COLORS[statusRaw] || UNKNOWN_COLOR;
+    const color = Object.prototype.hasOwnProperty.call(STATUS_COLORS, statusRaw) ? STATUS_COLORS[statusRaw] : UNKNOWN_COLOR;
     const power = powerKw ? `${Number(powerKw)} kW` : "";
     return `<div class="box" style="background:${color};">
       ${num !== null ? `<div class="num">#${num}</div>` : ""}
@@ -485,9 +485,8 @@ class SwissChargingStationsCard extends HTMLElement {
   }
 
   _escape(value) {
-    const div = document.createElement("div");
-    div.textContent = value == null ? "" : String(value);
-    return div.innerHTML;
+    // Attribute-safe as well: quotes are escaped too.
+    return String(value == null ? "" : value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 }
 
