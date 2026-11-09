@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.14.1 — 2026-11-09
+
+- **Version on the service card.** The integration's version now appears on its service card under Settings → Devices & services, where the entities are listed.
+
 ## 1.14.0 — 2026-11-09
 
 - **Quality scale Bronze.** The integration keeps its coordinator in the config entry's runtime data, the README gained removal instructions and a quality-scale section, and the manifest declares the **bronze** tier. A test suite (station parsing, site grouping and merging, opening hours and site status, filters, published prices, config flow with radius, favorite by EvseID, nearby pick, duplicate, unreachable service and reconfigure) runs on every push. No change to entities or configuration.
