@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.14.0 — 2026-11-09
+
+- **Quality scale Bronze.** The integration keeps its coordinator in the config entry's runtime data, the README gained removal instructions and a quality-scale section, and the manifest declares the **bronze** tier. A test suite (station parsing, site grouping and merging, opening hours and site status, filters, published prices, config flow with radius, favorite by EvseID, nearby pick, duplicate, unreachable service and reconfigure) runs on every push. No change to entities or configuration.
+
 ## 1.13.0 — 2026-11-08
 
 - **New: repair notices.** A notice under **Settings → Repairs** when the ich-tanke-strom.ch service has not answered for three refreshes in a row (it clears itself with the next successful refresh), and when a favorite charge point or site is no longer in its data, with a pointer to *Reconfigure*. In all four languages.
