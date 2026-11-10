@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 <a href="https://www.buymeacoffee.com/prusuino"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="20"></a>
 
+![Swiss Charging Stations](readme_header.png)
+
 A Home Assistant custom integration that shows real-time availability of public EV charging stations in Switzerland, sourced from the official **ich-tanke-strom.ch** platform (BFE / EnergieSchweiz / swisstopo).
 
 ## Background
@@ -168,7 +170,7 @@ On Home Assistant 2026.10 or newer the integration adds its own entries to the a
 triggers:
   - trigger: ich_tanke_strom.favorite_became_available
     target:
-      entity_id: sensor.charging_station_favorite_gofast_olten_7f3a
+      entity_id: sensor.charging_station_favorite_gofast_luzern_7f3a
   - trigger: ich_tanke_strom.available_count_crossed_threshold
     target:
       entity_id: sensor.charging_stations_available_15km_7f3a
@@ -180,7 +182,7 @@ triggers:
 conditions:
   - condition: ich_tanke_strom.is_favorite_available
     target:
-      entity_id: sensor.charging_station_favorite_gofast_olten_7f3a
+      entity_id: sensor.charging_station_favorite_gofast_luzern_7f3a
 ```
 
 ## Language
