@@ -8,6 +8,17 @@
 
 A Home Assistant custom integration that shows real-time availability of public EV charging stations in Switzerland, sourced from the official **ich-tanke-strom.ch** platform (BFE / EnergieSchweiz / swisstopo).
 
+## Highlights
+
+- **About 19,000 charging points with live status**: from ich-tanke-strom.ch, refreshed every 5 minutes, no account or key.
+- **Three ways to use it**: a radius overview with map markers and an available count, a favorite station, or a favorite site with a sensor for every connector.
+- **Filters that apply at once**: minimum power, plug type, status and operator are entities — change them on the dashboard, no reconfiguring.
+- **Prices where published**: the ad-hoc price from the Swiss eMobility price dataset.
+- **A card for your charger**: status boxes per connector, opening hours, accessibility and renewable energy, with a visual editor.
+- **Built for the automation editor**: triggers (favorite became available, favorite became occupied, available count crossed a threshold), conditions (favorite is available / occupied) and a blueprint that tells you when your favorite is free — no templates needed.
+- **A dashboard without building one**: the bundled strategy brings Map and Charging stations views.
+- **Set up in a minute**: starts from your Home Assistant location, a favorite by its EvseID or a search nearby; German, English, French and Italian; diagnostics download with your coordinates redacted.
+
 ## Background
 
 ich-tanke-strom.ch operates a public WFS/GeoServer API covering roughly **19,000 charging points** across Switzerland, with live status (available / occupied / out of service) for each one — no authentication required. This integration offers two independent ways to use that data, chosen when you add the integration:
