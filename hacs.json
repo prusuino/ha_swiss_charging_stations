@@ -1,5 +1,6 @@
 {
   "name": "Swiss Charging Stations (ich-tanke-strom.ch)",
+  "country": "CH",
   "zip_release": true,
   "filename": "ich_tanke_strom.zip",
   "render_readme": true,
