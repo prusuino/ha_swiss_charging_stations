@@ -44,6 +44,7 @@ from .const import (
     UPDATE_INTERVAL_MINUTES,
     WFS_URL,
 )
+from .ocpi import OcpiCache, get_ocpi_cache
 from .oicp import OicpCache, get_oicp_cache
 from .prices import annotate_prices, get_price_cache
 
@@ -146,6 +147,14 @@ async def _oicp(hass: HomeAssistant) -> OicpCache:
     return cache
 
 
+async def _ocpi(hass: HomeAssistant) -> OcpiCache:
+    """The new API of ich-tanke-strom.ch, brought up to date (see ocpi.py).
+    Never raises; while it cannot be read it simply contributes nothing."""
+    cache = get_ocpi_cache(hass)
+    await cache.async_ensure_fresh(hass)
+    return cache
+
+
 async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radius_km: float) -> dict[str, dict]:
     lat_delta = radius_km / KM_PER_DEGREE
     lon_delta = radius_km / (KM_PER_DEGREE * max(0.1, math.cos(math.radians(lat))))
@@ -184,6 +193,15 @@ async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radi
         if station["distance_km"] > radius_km:
             continue
         stations[station["id"]] = station
+
+    # Live status from the new API for the charge points it knows, and the
+    # charge points only it lists.
+    ocpi = await _ocpi(hass)
+    ocpi.apply_status(stations)
+    for station_id, station in ocpi.additional_stations(lat, lon, radius_km, stations).items():
+        station["distance_km"] = round(haversine_km(lat, lon, station["latitude"], station["longitude"]), 2)
+        if station["distance_km"] <= radius_km:
+            stations[station_id] = station
     return stations
 
 
@@ -206,9 +224,14 @@ async def async_fetch_station_by_id(hass: HomeAssistant, evse_id: str) -> dict |
     features = await _wfs_features(hass, params, 30)
     if features is None:
         features = (await _oicp(hass)).features_by_evse_ids([evse_id])
+    ocpi = await _ocpi(hass)
     if not features:
-        return None
-    return _parse_station(features[0])
+        # A charge point only the new API lists.
+        return ocpi.station_by_evse_id(evse_id)
+    station = _parse_station(features[0])
+    if station is not None:
+        ocpi.apply_status({station["id"]: station})
+    return station
 
 
 async def async_fetch_stations_by_evse_ids(hass: HomeAssistant, evse_ids: list[str]) -> dict[str, dict]:
@@ -235,6 +258,13 @@ async def async_fetch_stations_by_evse_ids(hass: HomeAssistant, evse_ids: list[s
         if station is None or not station.get("evse_id"):
             continue
         stations[station["evse_id"]] = station
+    ocpi = await _ocpi(hass)
+    ocpi.apply_status(stations)
+    for evse_id in evse_ids:
+        if evse_id not in stations:
+            station = ocpi.station_by_evse_id(evse_id)
+            if station is not None:
+                stations[station["evse_id"]] = station
     return stations
 
 
@@ -242,6 +272,10 @@ async def async_fetch_station_location(hass: HomeAssistant, charging_station_id:
     """Fetch every charge point (EVSE) sharing the given ChargingStationId —
     i.e. every connector at one physical site. Returns a dict keyed by
     evse_id, empty if the location no longer has any connectors."""
+    ocpi = await _ocpi(hass)
+    if charging_station_id.startswith("ocpi:"):
+        # A site only the new API lists.
+        return ocpi.stations_of_site(charging_station_id)
     escaped_id = charging_station_id.replace("'", "''")  # CQL string-literal escaping
     params = {
         "service": "WFS",
@@ -260,6 +294,7 @@ async def async_fetch_station_location(hass: HomeAssistant, charging_station_id:
         if station is None or not station.get("evse_id"):
             continue
         stations[station["evse_id"]] = station
+    ocpi.apply_status(stations)
     return stations
 
 

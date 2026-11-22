@@ -18,6 +18,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
+from .ocpi import get_ocpi_cache
 from .oicp import get_oicp_cache
 from .const import DOMAIN
 
@@ -111,5 +112,12 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
         "coordinators": {name: _coordinator_info(c) for name, c in _coordinators(hass, entry).items() if c is not None},
         # True while the GeoServer is down and the OICP files are read instead.
         "source": "oicp_files" if get_oicp_cache(hass).in_use else "wfs",
+        # The new API of ich-tanke-strom.ch: how many charge points it lists
+        # and for how many it supplies the live status.
+        "ocpi": {
+            "in_use": get_ocpi_cache(hass).usable(),
+            "charge_points": get_ocpi_cache(hass).charge_points,
+            "with_live_status": get_ocpi_cache(hass).with_live_status,
+        },
         "entities": entities,
     }
