@@ -18,7 +18,7 @@ body:
     attributes:
       label: Version of Swiss Charging Stations (ich-tanke-strom.ch)
       description: Settings → Devices & services → Swiss Charging Stations (ich-tanke-strom.ch), or the Marketplace / HACS entry.
-      placeholder: "1.14.4"
+      placeholder: "1.15.0"
     validations:
       required: true
   - type: input

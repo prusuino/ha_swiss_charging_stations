@@ -320,7 +320,7 @@ The integration declares **Bronze** on the [Home Assistant integration quality s
 
 ## Data source & license
 
-This integration reads live data from the official ich-tanke-strom.ch WFS API. Citing the source is required whenever this data is displayed — see [NOTICE.md](NOTICE.md) for details. Every entity sets Home Assistant's `attribution` attribute accordingly.
+This integration reads live data from the official ich-tanke-strom.ch WFS API. Should that server fail, it reads the same data from the two OICP files the Swiss Federal Office of Energy publishes on data.geo.admin.ch (`…/data/oicp/…` for the charge points, `…/status/oicp/…` for their status, regenerated about every minute) and tries the server again every 30 minutes; the log says when this happens, and the diagnostics show the source in use. Only the payment options are missing in the files. Citing the source is required whenever this data is displayed — see [NOTICE.md](NOTICE.md) for details. Every entity sets Home Assistant's `attribution` attribute accordingly.
 
 Charging prices come from a second source: the ["Ladepreiskarte Swiss eMobility"](https://opendata.swiss/de/dataset/ladepreiskarte-swiss-emobility) open dataset (price atlas by Swiss eMobility / chargeprice.app), as republished by the SFOE in the charging-station layer on data.geo.admin.ch — the same values ich-tanke-strom.ch and map.geo.admin.ch display. Prices are the operators' published ad-hoc (direct payment) rates, not contract or roaming tariffs, and only exist for operators that report them (roughly a quarter of all Swiss sites). They are fetched at most every 6 hours; a price fetch failure never affects the availability data.
 

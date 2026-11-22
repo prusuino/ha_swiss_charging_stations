@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.0 — 2026-11-22
+
+- **Keeps working when the ich-tanke-strom.ch server goes away.** The Swiss Federal Office of Energy is moving ich-tanke-strom.ch to a new platform (OCPI 2.3) from December 2026; the GeoServer this integration reads is no longer mentioned in its documentation, and the new API covers only about a third of the charge points so far. When the GeoServer fails, the integration now reads the same data from the OICP files the office publishes on data.geo.admin.ch over HTTPS — every charge point and its status, regenerated about every minute — and filters them locally. The GeoServer is tried again every 30 minutes and used as soon as it answers. Compared live for Olten, Zürich, Geneva, Lugano and Bern (5,300 charge points), both sources give the same charge points and, apart from changes between the two reads, the same status. Only the payment options are missing in the files.
+- **Diagnostics** show which source is in use (`wfs` or `oicp_files`).
+
 ## 1.14.4 — 2026-11-19
 
 - The Home Assistant Marketplace lists the integration under *Energy → EV charging* and *Vehicles & transport → Cars & EVs*. The repository is marked as made for Switzerland. Nothing changes in how the integration works.

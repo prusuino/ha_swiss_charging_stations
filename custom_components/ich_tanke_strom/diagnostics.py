@@ -18,6 +18,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
+from .oicp import get_oicp_cache
 from .const import DOMAIN
 
 REDACTED = "**REDACTED**"
@@ -108,5 +109,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
             "options": _entry_values(entry.options),
         },
         "coordinators": {name: _coordinator_info(c) for name, c in _coordinators(hass, entry).items() if c is not None},
+        # True while the GeoServer is down and the OICP files are read instead.
+        "source": "oicp_files" if get_oicp_cache(hass).in_use else "wfs",
         "entities": entities,
     }

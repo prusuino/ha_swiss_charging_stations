@@ -3,7 +3,8 @@
 Uses the official WFS/GeoServer REST API, no authentication required. Bbox
 query (rough server-side pre-filtering) plus exact Haversine distance
 filtering in code — a tested DWITHIN radius query did not return correctly
-filtered results on this server.
+filtered results on this server. When the WFS fails, the same data is read
+from the OICP files on data.geo.admin.ch and filtered locally (oicp.py).
 """
 from __future__ import annotations
 
@@ -12,6 +13,8 @@ import logging
 import math
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -41,6 +44,7 @@ from .const import (
     UPDATE_INTERVAL_MINUTES,
     WFS_URL,
 )
+from .oicp import OicpCache, get_oicp_cache
 from .prices import annotate_prices, get_price_cache
 
 _LOGGER = logging.getLogger(__name__)
@@ -110,9 +114,39 @@ def _parse_station(feature: dict, lat: float | None = None, lon: float | None = 
     }
 
 
-async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radius_km: float) -> dict[str, dict]:
-    session = async_get_clientsession(hass)
+# Errors that mean "the WFS did not deliver": network, HTTP status, timeout,
+# or a body that is not the expected JSON.
+_WFS_ERRORS = (aiohttp.ClientError, TimeoutError, ValueError)
 
+
+async def _wfs_features(hass: HomeAssistant, params: dict, timeout: int) -> list[dict] | None:
+    """Features from the WFS, or None when it failed or is resting after a
+    failure; the caller then answers from the OICP files (see oicp.py)."""
+    cache = get_oicp_cache(hass)
+    if not cache.wfs_usable():
+        return None
+    session = async_get_clientsession(hass)
+    try:
+        async with session.get(WFS_URL, params=params, timeout=timeout) as resp:
+            resp.raise_for_status()
+            data = await resp.json(content_type=None)
+        features = data.get("features")
+        if not isinstance(features, list):
+            raise ValueError("WFS answer has no feature list")
+    except _WFS_ERRORS as err:
+        cache.wfs_failed(err)
+        return None
+    cache.wfs_ok()
+    return features
+
+
+async def _oicp(hass: HomeAssistant) -> OicpCache:
+    cache = get_oicp_cache(hass)
+    await cache.async_ensure_fresh(hass)
+    return cache
+
+
+async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radius_km: float) -> dict[str, dict]:
     lat_delta = radius_km / KM_PER_DEGREE
     lon_delta = radius_km / (KM_PER_DEGREE * max(0.1, math.cos(math.radians(lat))))
     bbox = f"{lon - lon_delta},{lat - lat_delta},{lon + lon_delta},{lat + lat_delta}"
@@ -134,12 +168,12 @@ async def async_fetch_stations(hass: HomeAssistant, lat: float, lon: float, radi
         ),
         "cql_filter": f"bbox(geometry,{bbox})",
     }
-    async with session.get(WFS_URL, params=params, timeout=FETCH_TIMEOUT_SECONDS) as resp:
-        resp.raise_for_status()
-        data = await resp.json(content_type=None)
+    features = await _wfs_features(hass, params, FETCH_TIMEOUT_SECONDS)
+    if features is None:
+        features = (await _oicp(hass)).features_in_area(lat, lon, radius_km)
 
     stations: dict[str, dict] = {}
-    for feature in data.get("features", []):
+    for feature in features:
         try:
             station = _parse_station(feature, lat, lon)
         except Exception:  # noqa: BLE001 - one malformed feature must never kill the whole refresh
@@ -160,7 +194,6 @@ async def async_fetch_station_by_id(hass: HomeAssistant, evse_id: str) -> dict |
     key the radius view's stations dict. Independent of any location/radius,
     used both to validate a favorite during setup and to refresh it
     afterwards. Returns None if no station matches."""
-    session = async_get_clientsession(hass)
     escaped_id = evse_id.replace("'", "''")  # CQL string-literal escaping
     params = {
         "service": "WFS",
@@ -170,10 +203,9 @@ async def async_fetch_station_by_id(hass: HomeAssistant, evse_id: str) -> dict |
         "outputFormat": "application/json",
         "cql_filter": f"EvseID='{escaped_id}'",
     }
-    async with session.get(WFS_URL, params=params, timeout=30) as resp:
-        resp.raise_for_status()
-        data = await resp.json(content_type=None)
-    features = data.get("features", [])
+    features = await _wfs_features(hass, params, 30)
+    if features is None:
+        features = (await _oicp(hass)).features_by_evse_ids([evse_id])
     if not features:
         return None
     return _parse_station(features[0])
@@ -185,7 +217,6 @@ async def async_fetch_stations_by_evse_ids(hass: HomeAssistant, evse_ids: list[s
     group_by_location, where no single ChargingStationId covers the whole
     site. Returns a dict keyed by evse_id, empty if none of them exist
     anymore."""
-    session = async_get_clientsession(hass)
     escaped = ",".join(f"'{e.replace(chr(39), chr(39) * 2)}'" for e in evse_ids)
     params = {
         "service": "WFS",
@@ -195,11 +226,11 @@ async def async_fetch_stations_by_evse_ids(hass: HomeAssistant, evse_ids: list[s
         "outputFormat": "application/json",
         "cql_filter": f"EvseID IN ({escaped})",
     }
-    async with session.get(WFS_URL, params=params, timeout=30) as resp:
-        resp.raise_for_status()
-        data = await resp.json(content_type=None)
+    features = await _wfs_features(hass, params, 30)
+    if features is None:
+        features = (await _oicp(hass)).features_by_evse_ids(evse_ids)
     stations: dict[str, dict] = {}
-    for feature in data.get("features", []):
+    for feature in features:
         station = _parse_station(feature)
         if station is None or not station.get("evse_id"):
             continue
@@ -211,7 +242,6 @@ async def async_fetch_station_location(hass: HomeAssistant, charging_station_id:
     """Fetch every charge point (EVSE) sharing the given ChargingStationId —
     i.e. every connector at one physical site. Returns a dict keyed by
     evse_id, empty if the location no longer has any connectors."""
-    session = async_get_clientsession(hass)
     escaped_id = charging_station_id.replace("'", "''")  # CQL string-literal escaping
     params = {
         "service": "WFS",
@@ -221,11 +251,11 @@ async def async_fetch_station_location(hass: HomeAssistant, charging_station_id:
         "outputFormat": "application/json",
         "cql_filter": f"ChargingStationId='{escaped_id}'",
     }
-    async with session.get(WFS_URL, params=params, timeout=30) as resp:
-        resp.raise_for_status()
-        data = await resp.json(content_type=None)
+    features = await _wfs_features(hass, params, 30)
+    if features is None:
+        features = (await _oicp(hass)).features_by_station_id(charging_station_id)
     stations: dict[str, dict] = {}
-    for feature in data.get("features", []):
+    for feature in features:
         station = _parse_station(feature)
         if station is None or not station.get("evse_id"):
             continue
