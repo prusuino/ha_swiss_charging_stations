@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.1 — 2026-11-23
+
+- **Fixed: a favorite that changed during an outage did not fire the triggers.** While the status cannot be read the favorite's sensors are unavailable, and Home Assistant ignores every change out of "unavailable". A charge point that was occupied before the outage and available after it did not fire *Favorite became available* (and the other way round for *occupied*). Both triggers now compare with the status before the outage; a favorite that comes back unchanged does not fire.
+- Tests for the triggers with real automations.
+
 ## 1.15.0 — 2026-11-22
 
 - **Live status from the new ich-tanke-strom.ch API where it has it.** The Swiss Federal Office of Energy connects the operators to its new platform (OCPI 2.3) one by one; in November 2026 it knows about a third of the charge points. For those the integration now takes the live status from the new API — in a comparison it agreed with the previous source for 99.8 % of the charge points and carried recent changes earlier — and it adds charge points only the new API lists. Everything else comes from the previous source as before, so nothing disappears, and the share taken from the new API grows by itself as operators are connected. Entity ids, favourites and sites stay as they are. A charge point is not added when the previous source already has one at the same spot or one with the same plug within 150 m, because operators list re-branded sites under new ids. Prices still come from the price atlas: the tariffs of the new API are net of VAT, mostly carry no tariff type and often differ from the published ad-hoc price. If the new API cannot be read, the status of the previous source is shown.
